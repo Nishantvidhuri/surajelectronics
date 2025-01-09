@@ -161,9 +161,17 @@ const Stand = () => {
               Enter Password
             </h3>
             <div className="flex justify-center mb-4">
-              <div className="bg-black text-white px-4 py-2 rounded-md text-lg w-full text-center">
+              <div className="bg-black  rounded-r-none text-white px-4 py-2 rounded-md text-lg w-full text-center">
                 {passwordInput || "Enter password"}
+                
               </div>
+              <button
+                onClick={handleDeleteInput}
+                className="bg-red-500 text-white py-3 rounded-l-none rounded-md w-16 hover:bg-red-600"
+              >
+                ⌫
+              </button>
+              
             </div>
             {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
             <div className="grid grid-cols-3 gap-2">
@@ -189,12 +197,7 @@ const Stand = () => {
               >
                 0
               </button>
-              <button
-                onClick={handleDeleteInput}
-                className="bg-red-500 text-white py-3 rounded-md hover:bg-red-600"
-              >
-                ⌫
-              </button>
+              
             </div>
             <button
               onClick={handlePasswordSubmit}
