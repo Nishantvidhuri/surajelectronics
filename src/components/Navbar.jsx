@@ -2,6 +2,12 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 const Navbar = ({ onSearch }) => {
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter") {
+      event.target.blur(); // Remove focus from the input field
+    }
+  };
+
   return (
     <nav className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg sticky top-0 z-50">
       <div className="container mx-auto py-4 px-4 md:px-8">
@@ -10,7 +16,7 @@ const Navbar = ({ onSearch }) => {
           {/* Logo */}
           <div className="flex items-center space-x-4">
             <img
-              src="https://png.pngtree.com/png-vector/20230414/ourmid/pngtree-se-logo-vector-png-image_6704562.png" // Update this path to your logo file
+              src="/photos/logo.png" // Update this path to your logo file
               alt="Suraj Electronics Logo"
               className="h-10 w-10"
             />
@@ -20,7 +26,26 @@ const Navbar = ({ onSearch }) => {
           </div>
 
           {/* Navigation Links */}
-         
+          <div className="flex space-x-6 mt-4 md:mt-0">
+            <Link
+              to="/"
+              className="text-lg font-medium hover:text-gray-200 transition duration-200"
+            >
+              Home
+            </Link>
+            <Link
+              to="/products"
+              className="text-lg font-medium hover:text-gray-200 transition duration-200"
+            >
+              Products
+            </Link>
+            <Link
+              to="/contact"
+              className="text-lg font-medium hover:text-gray-200 transition duration-200"
+            >
+              Contact
+            </Link>
+          </div>
         </div>
 
         {/* Bottom Row: Search Bar */}
@@ -29,6 +54,7 @@ const Navbar = ({ onSearch }) => {
             type="text"
             placeholder="Search..."
             onChange={(e) => onSearch(e.target.value)}
+            onKeyDown={handleKeyDown} // Call function on key press
             className="w-full px-4 py-2 rounded-md bg-gray-200 text-gray-700 focus:outline-none focus:ring focus:ring-blue-400"
           />
         </div>
