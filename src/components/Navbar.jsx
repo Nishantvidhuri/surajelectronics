@@ -16,7 +16,7 @@ const Navbar = ({ onSearch }) => {
           {/* Logo */}
           <div className="flex items-center space-x-4">
             <img
-              src="/photos/logo.png" // Update this path to your logo file
+              src="https://png.pngtree.com/png-vector/20230414/ourmid/pngtree-se-logo-vector-png-image_6704562.png" // Update this path to your logo file
               alt="Suraj Electronics Logo"
               className="h-10 w-10"
             />
@@ -25,27 +25,7 @@ const Navbar = ({ onSearch }) => {
             </Link>
           </div>
 
-          {/* Navigation Links */}
-          <div className="flex space-x-6 mt-4 md:mt-0">
-            <Link
-              to="/"
-              className="text-lg font-medium hover:text-gray-200 transition duration-200"
-            >
-              Home
-            </Link>
-            <Link
-              to="/products"
-              className="text-lg font-medium hover:text-gray-200 transition duration-200"
-            >
-              Products
-            </Link>
-            <Link
-              to="/contact"
-              className="text-lg font-medium hover:text-gray-200 transition duration-200"
-            >
-              Contact
-            </Link>
-          </div>
+         
         </div>
 
         {/* Bottom Row: Search Bar */}
