@@ -15,8 +15,8 @@ const Stand = () => {
   ];
 
   const movableStands = [
-    { id: 1, model: "BM-222", size: "32 inch", consumerPrice: 500, mechanicPrice: 400, costPrice: 300 },
-    { id: 2, model: "Z-3256", size: "55 inch", consumerPrice: 800, mechanicPrice: 700, costPrice: 500 },
+    { id: 1, model: "BM-222", size: "32 inch", consumerPrice: 500, mechanicPrice: 350, costPrice: 300 },
+    { id: 2, model: "Z-3256", size: "55 inch", consumerPrice: 950, mechanicPrice: 800, costPrice: 650 },
   ];
 
   const [currentSection, setCurrentSection] = useState(null);
