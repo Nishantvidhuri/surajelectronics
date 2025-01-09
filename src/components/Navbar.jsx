@@ -1,7 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
 const Navbar = ({ onSearch }) => {
+  const [searchValue, setSearchValue] = useState("");
+
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setSearchValue(value);
+    onSearch(value);
+  };
+
+  const handleClearSearch = () => {
+    setSearchValue(""); // Clear the input
+    onSearch(""); // Notify parent about the cleared search
+  };
+
   const handleKeyDown = (event) => {
     if (event.key === "Enter") {
       event.target.blur(); // Remove focus from the input field
@@ -25,18 +38,28 @@ const Navbar = ({ onSearch }) => {
             </Link>
           </div>
 
-         
+          
         </div>
 
         {/* Bottom Row: Search Bar */}
-        <div className="mt-4">
+        <div className="mt-4 relative">
           <input
             type="text"
+            value={searchValue}
             placeholder="Search..."
-            onChange={(e) => onSearch(e.target.value)}
-            onKeyDown={handleKeyDown} // Call function on key press
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
             className="w-full px-4 py-2 rounded-md bg-gray-200 text-gray-700 focus:outline-none focus:ring focus:ring-blue-400"
           />
+          {/* Clear Button */}
+          {searchValue && (
+            <button
+              onClick={handleClearSearch}
+              className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
+            >
+              ✖
+            </button>
+          )}
         </div>
       </div>
     </nav>
