@@ -128,9 +128,9 @@ const data = [
       "image": "/photos/CH-161_19.jpeg"
   },
   {
-      "name": "CH 169",
+      "name": "CH 171",
       "shelfNumber": "17",
-      "image": "/photos/CH-169_17.jpeg"
+      "image": "/photos/CH-171_17.jpeg"
   },
   {
       "name": "CH 169",
