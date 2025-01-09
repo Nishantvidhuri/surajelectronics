@@ -9,24 +9,23 @@ const Stand = () => {
     { id: 4, size: "21 inch", consumerPrice: 330, mechanicPrice: 250, costPrice: 170 },
   ];
 
-  // Data for Movable Stands
   const movableStands = [
     { id: 1, model: "BM-222", size: "32 inch", consumerPrice: 500, mechanicPrice: 400, costPrice: 300 },
     { id: 2, model: "Z-3256", size: "55 inch", consumerPrice: 800, mechanicPrice: 700, costPrice: 500 },
   ];
 
-  const [currentSection, setCurrentSection] = useState(null); // Tracks which section is displayed
+  const [currentSection, setCurrentSection] = useState(null);
   const [visibleMechanicPrice, setVisibleMechanicPrice] = useState({});
   const [visibleCostPrice, setVisibleCostPrice] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [error, setError] = useState("");
-  const [currentPriceType, setCurrentPriceType] = useState(""); // Tracks the price type (mechanic or cost)
+  const [currentPriceType, setCurrentPriceType] = useState("");
   const [currentStandId, setCurrentStandId] = useState(null);
 
   const handleShowModal = (id, type) => {
-    setCurrentStandId(id); // Store the ID of the stand
-    setCurrentPriceType(type); // Store the type of price to reveal
+    setCurrentStandId(id);
+    setCurrentPriceType(type);
     setPasswordInput("");
     setError("");
     setShowModal(true);
@@ -42,13 +41,26 @@ const Stand = () => {
       } else if (currentPriceType === "cost") {
         setVisibleCostPrice((prev) => ({ ...prev, [currentStandId]: true }));
       }
-      setShowModal(false); // Hide the modal
+      setShowModal(false);
     } else {
-      setError("Invalid password"); // Show error message for incorrect password
+      setError("Invalid password");
     }
   };
 
-  // Select the current data based on the selected section
+  const handleKeypadInput = (value) => {
+    setPasswordInput((prev) => prev + value);
+  };
+
+  const handleDeleteInput = () => {
+    setPasswordInput((prev) => prev.slice(0, -1));
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setPasswordInput("");
+    setError("");
+  };
+
   const currentStands =
     currentSection === "nonMovable" ? nonMovableStands : movableStands;
 
@@ -56,7 +68,6 @@ const Stand = () => {
     <div className="container mx-auto py-8 px-4">
       <h2 className="text-3xl font-bold mb-6">Stands</h2>
 
-      {/* Boxes for Non-Movable and Movable Sections */}
       {!currentSection && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div
@@ -74,7 +85,6 @@ const Stand = () => {
         </div>
       )}
 
-      {/* Table for Current Section */}
       {currentSection && (
         <div>
           <button
@@ -137,30 +147,60 @@ const Stand = () => {
         </div>
       )}
 
-      {/* Password Modal */}
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded-md shadow-lg w-96">
-            <h3 className="text-lg font-semibold mb-4">Enter Password</h3>
-            <input
-              type="password"
-              value={passwordInput}
-              onChange={(e) => setPasswordInput(e.target.value)}
-              className="w-full px-4 py-2 rounded-md bg-gray-200 text-gray-700 focus:outline-none"
-              placeholder="Enter password"
-            />
+          <div className="bg-white p-8 rounded-lg shadow-lg w-11/12 max-w-md relative">
+            {/* Close Button */}
+            <button
+              onClick={handleCloseModal}
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+            >
+              ✖
+            </button>
+            <h3 className="text-2xl font-bold text-gray-800 mb-4 text-center">
+              Enter Password
+            </h3>
+            <div className="flex justify-center mb-4">
+              <div className="bg-black text-white px-4 py-2 rounded-md text-lg w-full text-center">
+                {passwordInput || "Enter password"}
+              </div>
+            </div>
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+            <div className="grid grid-cols-3 gap-2">
+              {/* Keypad Layout */}
+              {Array.from({ length: 9 }, (_, i) => (
+                <button
+                  key={i + 1}
+                  onClick={() => handleKeypadInput((i + 1).toString())}
+                  className="bg-gray-300 text-gray-800 py-3 rounded-md hover:bg-gray-400"
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                
+                className=" text-gray-800 py-3 rounded-md col-span-1"
+              >
+                
+              </button>
+              <button
+                onClick={() => handleKeypadInput("0")}
+                className="bg-gray-300 text-gray-800 py-3 rounded-md hover:bg-gray-400 col-span-1"
+              >
+                0
+              </button>
+              <button
+                onClick={handleDeleteInput}
+                className="bg-red-500 text-white py-3 rounded-md hover:bg-red-600"
+              >
+                ⌫
+              </button>
+            </div>
             <button
               onClick={handlePasswordSubmit}
-              className="mt-4 w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition duration-200"
+              className="mt-4 w-full bg-blue-500 text-white py-3 rounded-md hover:bg-blue-600"
             >
               Submit
-            </button>
-            {error && <p className="text-red-500 mt-2">{error}</p>}
-            <button
-              onClick={() => setShowModal(false)}
-              className="mt-4 w-full bg-gray-300 text-gray-700 py-2 rounded-md hover:bg-gray-400 transition duration-200"
-            >
-              Cancel
             </button>
           </div>
         </div>
