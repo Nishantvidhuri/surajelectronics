@@ -94,28 +94,28 @@ const Stand = () => {
             Back to Categories
           </button>
 
-          <div className="overflow-hidden">
+          <div className="-translate-x-2 ">
             <table className="w-full bg-gray-800 text-white rounded-lg">
               <thead>
                 <tr>
-                  <th className="px-4 py-2 border-b border-gray-700 text-left">Size</th>
+                  <th className="px-2 py-2 border-b border-gray-700 text-left">Size</th>
                   {currentSection === "movable" && (
-                    <th className="px-4 py-2 border-b border-gray-700 text-left">Model</th>
+                    <th className="px-2 py-2 border-b border-gray-700 text-left">Model</th>
                   )}
-                  <th className="px-4 py-2 border-b border-gray-700 text-left">Consumer Price</th>
-                  <th className="px-4 py-2 border-b border-gray-700 text-left">Mechanic Price</th>
-                  <th className="px-4 py-2 border-b border-gray-700 text-left">Cost Price</th>
+                  <th className="px-2 py-2 border-b border-gray-700 text-left">Consumer Price</th>
+                  <th className="px-2 py-2 border-b border-gray-700 text-left">Mechanic Price</th>
+                  <th className="px-2 py-2 border-b border-gray-700 text-left">Cost Price</th>
                 </tr>
               </thead>
               <tbody>
                 {currentStands.map((stand) => (
                   <tr key={stand.id}>
-                    <td className="px-4 py-2 border-b border-gray-700">{stand.size}</td>
+                    <td className="px-2 py-2 border-b border-gray-700">{stand.size}</td>
                     {currentSection === "movable" && (
-                      <td className="px-4 py-2 border-b border-gray-700">{stand.model}</td>
+                      <td className="px-2 py-2 border-b border-gray-700">{stand.model}</td>
                     )}
-                    <td className="px-4 py-2 border-b border-gray-700">₹{stand.consumerPrice}</td>
-                    <td className="px-4 py-2 border-b border-gray-700">
+                    <td className="px-2 py-2 border-b border-gray-700">₹{stand.consumerPrice}</td>
+                    <td className="px-2 py-2 border-b border-gray-700">
                       {visibleMechanicPrice[stand.id] ? (
                         `₹${stand.mechanicPrice}`
                       ) : (
@@ -127,7 +127,7 @@ const Stand = () => {
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-2 border-b border-gray-700">
+                    <td className="px-2 py-2 border-b border-gray-700">
                       {visibleCostPrice[stand.id] ? (
                         `₹${stand.costPrice}`
                       ) : (
