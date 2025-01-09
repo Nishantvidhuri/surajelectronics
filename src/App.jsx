@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import TVRemotes from "./pages/TVRemotes";
+import Stand from "./pages/Stand";
+import Home from "./pages/Home"; // Import the Home component
 import { ProductProvider } from "./context/ProductContext";
 
 const App = () => {
@@ -11,12 +13,12 @@ const App = () => {
     <ProductProvider>
       <Router>
         <div className="dark">
-          {/* Navbar */}
           <Navbar onSearch={(query) => setSearchQuery(query.toLowerCase())} />
-          
-          {/* Routes */}
           <Routes>
-            <Route path="/" element={<TVRemotes searchQuery={searchQuery} />} />
+            <Route path="/" element={<Home />} /> {/* Default Home page */}
+            <Route path="/remotes" element={<TVRemotes searchQuery={searchQuery} />} />
+            <Route path="/stands" element={<Stand />} />
+            <Route path="*" element={<Navigate to="/" />} /> {/* Redirect unknown paths to Home */}
           </Routes>
         </div>
       </Router>

@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 const Navbar = ({ onSearch }) => {
   const [searchValue, setSearchValue] = useState("");
+  const location = useLocation(); // To check the current route
 
   const handleInputChange = (e) => {
     const value = e.target.value;
@@ -31,36 +32,39 @@ const Navbar = ({ onSearch }) => {
             <img
               src="https://png.pngtree.com/png-vector/20230414/ourmid/pngtree-se-logo-vector-png-image_6704562.png" // Update this path to your logo file
               alt="Suraj Electronics Logo"
-              className="h-10 w-10"
+              className="h-10 w-10 cursor-pointer"
+              onClick={() => window.location.href = "/"} // Navigate to Home
             />
             <Link to="/" className="text-2xl font-bold">
               Suraj Electronics
             </Link>
           </div>
 
-          
+      
         </div>
 
-        {/* Bottom Row: Search Bar */}
-        <div className="mt-4 relative">
-          <input
-            type="text"
-            value={searchValue}
-            placeholder="Search..."
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            className="w-full px-4 py-2 rounded-md bg-gray-200 text-gray-700 focus:outline-none focus:ring focus:ring-blue-400"
-          />
-          {/* Clear Button */}
-          {searchValue && (
-            <button
-              onClick={handleClearSearch}
-              className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
-            >
-              ✖
-            </button>
-          )}
-        </div>
+        {/* Bottom Row: Search Bar (only in /remotes) */}
+        {location.pathname === "/remotes" && (
+          <div className="mt-4 relative">
+            <input
+              type="text"
+              value={searchValue}
+              placeholder="Search remotes..."
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              className="w-full px-4 py-2 rounded-md bg-gray-200 text-gray-700 focus:outline-none focus:ring focus:ring-blue-400"
+            />
+            {/* Clear Button */}
+            {searchValue && (
+              <button
+                onClick={handleClearSearch}
+                className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
+              >
+                ✖
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </nav>
   );
