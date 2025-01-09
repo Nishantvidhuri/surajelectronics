@@ -1,6 +1,11 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import '@fortawesome/fontawesome-free/css/all.min.css';
 
 const Stand = () => {
+  const navigate = useNavigate(); // For navigation
+
   // Data for Non-Movable Stands
   const nonMovableStands = [
     { id: 1, size: "10 inch", consumerPrice: 140, mechanicPrice: 100, costPrice: 60 },
@@ -69,18 +74,26 @@ const Stand = () => {
       <h2 className="text-3xl font-bold mb-6">Stands</h2>
 
       {!currentSection && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div
-            onClick={() => setCurrentSection("nonMovable")}
-            className="bg-blue-500 text-white text-center py-8 rounded-lg shadow-lg cursor-pointer hover:bg-blue-600 transition duration-200"
+        <div>
+          <button
+            onClick={() => navigate("/")} // Navigate to root path
+            className="mb-6 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-200"
           >
-            <h3 className="text-xl font-bold">Non-Movable Stands</h3>
-          </div>
-          <div
-            onClick={() => setCurrentSection("movable")}
-            className="bg-green-500 text-white text-center py-8 rounded-lg shadow-lg cursor-pointer hover:bg-green-600 transition duration-200"
-          >
-            <h3 className="text-xl font-bold">Movable Stands</h3>
+           <i class="fa-solid fa-arrow-left"></i>
+          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div
+              onClick={() => setCurrentSection("nonMovable")}
+              className="bg-blue-500 text-white text-center py-8 rounded-lg shadow-lg cursor-pointer hover:bg-blue-600 transition duration-200"
+            >
+              <h3 className="text-xl font-bold">Non-Movable Stands</h3>
+            </div>
+            <div
+              onClick={() => setCurrentSection("movable")}
+              className="bg-green-500 text-white text-center py-8 rounded-lg shadow-lg cursor-pointer hover:bg-green-600 transition duration-200"
+            >
+              <h3 className="text-xl font-bold">Movable Stands</h3>
+            </div>
           </div>
         </div>
       )}
@@ -91,10 +104,10 @@ const Stand = () => {
             onClick={() => setCurrentSection(null)}
             className="mb-6 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-200"
           >
-            Back to Categories
+            <i class="fa-solid fa-arrow-left"></i>
           </button>
 
-          <div className="-translate-x-2 ">
+          <div className="overflow-x-auto">
             <table className="w-full bg-gray-800 text-white rounded-lg">
               <thead>
                 <tr>
@@ -150,7 +163,6 @@ const Stand = () => {
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-8 rounded-lg shadow-lg w-11/12 max-w-md relative">
-            {/* Close Button */}
             <button
               onClick={handleCloseModal}
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
@@ -173,7 +185,6 @@ const Stand = () => {
             </div>
             {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
             <div className="grid grid-cols-3 gap-2">
-              {/* Keypad Layout */}
               {Array.from({ length: 9 }, (_, i) => (
                 <button
                   key={i + 1}
