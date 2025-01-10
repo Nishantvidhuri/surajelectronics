@@ -3,11 +3,12 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-d
 import Navbar from "./components/Navbar";
 import TVRemotes from "./pages/TVRemotes";
 import Stand from "./pages/Stand";
-import Home from "./pages/Home"; // Import the Home component
+import Home from "./pages/Home";
+import AllData from "./pages/AllData"; // Import AllData component
 import { ProductProvider } from "./context/ProductContext";
 
 const App = () => {
-  const [searchQuery, setSearchQuery] = useState(""); // State for search query
+  const [searchQuery, setSearchQuery] = useState("");
 
   return (
     <ProductProvider>
@@ -15,10 +16,11 @@ const App = () => {
         <div className="dark">
           <Navbar onSearch={(query) => setSearchQuery(query.toLowerCase())} />
           <Routes>
-            <Route path="/" element={<Home />} /> {/* Default Home page */}
+            <Route path="/" element={<Home />} />
             <Route path="/remotes" element={<TVRemotes searchQuery={searchQuery} />} />
             <Route path="/stands" element={<Stand />} />
-            <Route path="*" element={<Navigate to="/" />} /> {/* Redirect unknown paths to Home */}
+            <Route path="/all-data" element={<AllData />} />
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </div>
       </Router>
