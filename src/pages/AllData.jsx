@@ -10,6 +10,7 @@ const AllData = () => {
   const [error, setError] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [editIndex, setEditIndex] = useState(null); // Track the index of the item being edited
+  const [isLoading, setIsLoading] = useState(true); // Track the loading state
 
   const correctPassword = "8826275828"; // The predefined password
 
@@ -20,8 +21,10 @@ const AllData = () => {
         const response = await axios.get("http://localhost:5000/api/products");
         setData(response.data);
         setEditedData(response.data);
+        setIsLoading(false); // Set loading to false after data is fetched
       } catch (error) {
         console.error("Error fetching data:", error);
+        setIsLoading(false); // Set loading to false in case of an error
       }
     };
 
@@ -103,101 +106,108 @@ const AllData = () => {
         />
       </div>
 
-      {/* Editable Table */}
-      <div className="overflow-x-auto rounded-lg shadow-lg">
-        <table className="w-full text-left bg-gray-800 rounded-lg">
-          <thead className="bg-gray-700 text-gray-100">
-            <tr>
-              <th className="px-6 py-3 text-sm font-semibold">Product Name</th>
-              <th className="px-6 py-3 text-sm font-semibold">For Mechanic</th>
-              <th className="px-6 py-3 text-sm font-semibold">For Customer</th>
-              <th className="px-6 py-3 text-sm font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredData.map((row, index) => (
-              <tr
-                key={index}
-                className={`border-b border-gray-700 ${
-                  index % 2 === 0 ? "bg-gray-900" : "bg-gray-800"
-                }`}
-              >
-                <td className="px-6 py-4">
-                  {editIndex === index && isAuthenticated ? (
-                    <input
-                      type="text"
-                      value={row["product name"] || ""}
-                      onChange={(e) =>
-                        setEditedData((prevData) => {
-                          const updatedData = [...prevData];
-                          updatedData[index]["product name"] = e.target.value;
-                          return updatedData;
-                        })
-                      }
-                      className="w-full bg-transparent focus:outline-none text-gray-200 px-2 py-1 border-b border-gray-700 focus:border-blue-500"
-                    />
-                  ) : (
-                    row["product name"]
-                  )}
-                </td>
-                <td className="px-6 py-4">
-                  {editIndex === index && isAuthenticated ? (
-                    <input
-                      type="text"
-                      value={row["for mechanic"] || ""}
-                      onChange={(e) =>
-                        setEditedData((prevData) => {
-                          const updatedData = [...prevData];
-                          updatedData[index]["for mechanic"] = e.target.value;
-                          return updatedData;
-                        })
-                      }
-                      className="w-full bg-transparent focus:outline-none text-gray-200 px-2 py-1 border-b border-gray-700 focus:border-blue-500"
-                    />
-                  ) : (
-                    row["for mechanic"]
-                  )}
-                </td>
-                <td className="px-6 py-4">
-                  {editIndex === index && isAuthenticated ? (
-                    <input
-                      type="text"
-                      value={row["for costumer "] || ""}
-                      onChange={(e) =>
-                        setEditedData((prevData) => {
-                          const updatedData = [...prevData];
-                          updatedData[index]["for costumer "] = e.target.value;
-                          return updatedData;
-                        })
-                      }
-                      className="w-full bg-transparent focus:outline-none text-gray-200 px-2 py-1 border-b border-gray-700 focus:border-blue-500"
-                    />
-                  ) : (
-                    row["for costumer "]
-                  )}
-                </td>
-                <td className="px-6 py-4">
-                  {editIndex === index && isAuthenticated ? (
-                    <button
-                      onClick={handleSaveEdit}
-                      className="bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600"
-                    >
-                      Save
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleEditClick(index)}
-                      className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600"
-                    >
-                      ✏️ Edit
-                    </button>
-                  )}
-                </td>
+      {/* Show Loading Indicator if Data is Still Loading */}
+      {isLoading ? (
+        <div className="flex justify-center items-center py-10">
+          <div className="text-white text-xl">Loading...</div>
+        </div>
+      ) : (
+        // Editable Table
+        <div className="overflow-x-auto rounded-lg shadow-lg">
+          <table className="w-full text-left bg-gray-800 rounded-lg">
+            <thead className="bg-gray-700 text-gray-100">
+              <tr>
+                <th className="px-6 py-3 text-sm font-semibold">Product Name</th>
+                <th className="px-6 py-3 text-sm font-semibold">For Mechanic</th>
+                <th className="px-6 py-3 text-sm font-semibold">For Customer</th>
+                <th className="px-6 py-3 text-sm font-semibold">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {filteredData.map((row, index) => (
+                <tr
+                  key={index}
+                  className={`border-b border-gray-700 ${
+                    index % 2 === 0 ? "bg-gray-900" : "bg-gray-800"
+                  }`}
+                >
+                  <td className="px-6 py-4">
+                    {editIndex === index && isAuthenticated ? (
+                      <input
+                        type="text"
+                        value={row["product name"] || ""}
+                        onChange={(e) =>
+                          setEditedData((prevData) => {
+                            const updatedData = [...prevData];
+                            updatedData[index]["product name"] = e.target.value;
+                            return updatedData;
+                          })
+                        }
+                        className="w-full bg-transparent focus:outline-none text-gray-200 px-2 py-1 border-b border-gray-700 focus:border-blue-500"
+                      />
+                    ) : (
+                      row["product name"]
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    {editIndex === index && isAuthenticated ? (
+                      <input
+                        type="text"
+                        value={row["for mechanic"] || ""}
+                        onChange={(e) =>
+                          setEditedData((prevData) => {
+                            const updatedData = [...prevData];
+                            updatedData[index]["for mechanic"] = e.target.value;
+                            return updatedData;
+                          })
+                        }
+                        className="w-full bg-transparent focus:outline-none text-gray-200 px-2 py-1 border-b border-gray-700 focus:border-blue-500"
+                      />
+                    ) : (
+                      row["for mechanic"]
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    {editIndex === index && isAuthenticated ? (
+                      <input
+                        type="text"
+                        value={row["for costumer "] || ""}
+                        onChange={(e) =>
+                          setEditedData((prevData) => {
+                            const updatedData = [...prevData];
+                            updatedData[index]["for costumer "] = e.target.value;
+                            return updatedData;
+                          })
+                        }
+                        className="w-full bg-transparent focus:outline-none text-gray-200 px-2 py-1 border-b border-gray-700 focus:border-blue-500"
+                      />
+                    ) : (
+                      row["for costumer "]
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    {editIndex === index && isAuthenticated ? (
+                      <button
+                        onClick={handleSaveEdit}
+                        className="bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600"
+                      >
+                        Save
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleEditClick(index)}
+                        className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600"
+                      >
+                        ✏️ Edit
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Modal for Password Entry */}
       {isModalOpen && (
