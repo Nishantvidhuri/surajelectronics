@@ -7,10 +7,12 @@ const AllData = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [editIndex, setEditIndex] = useState(null);
   const [editedData, setEditedData] = useState([]);
+  const [isShowPrice, setIsShowPrice] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null); // Track pending actions (edit or show price)
 
   useEffect(() => {
     if (allData.length > 0) {
@@ -26,18 +28,13 @@ const AllData = () => {
   );
 
   const handleEditClick = (index) => {
-    setEditIndex(index);
-    setIsModalOpen(true); // Open modal for password input
+    setPendingAction({ type: "edit", index }); // Set action as edit
+    setIsModalOpen(true); // Open password modal
   };
 
   const handleSaveEdit = async () => {
     if (!editedData[editIndex]) {
       alert("Error: No data to save.");
-      return;
-    }
-
-    if (!isAuthenticated) {
-      alert("Authentication required to save changes.");
       return;
     }
 
@@ -52,7 +49,6 @@ const AllData = () => {
       updatedData[editIndex] = updatedProduct;
       setAllData(updatedData);
       setEditedData(updatedData);
-      setIsModalOpen(false);
       setEditIndex(null);
     } catch (error) {
       console.error("Error saving product:", error.message);
@@ -60,29 +56,30 @@ const AllData = () => {
     }
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setPasswordInput(""); // Clear password field when modal closes
-    setError(null);
-  };
-
-  const handleKeypadInput = (digit) => {
-    setPasswordInput((prevInput) => prevInput + digit);
-  };
-
   const handlePasswordSubmit = () => {
-    if (passwordInput === "1234") {
+    if (pendingAction?.type === "showPrice" && passwordInput === "3695") {
+      setIsShowPrice(true);
+      setError(null);
+      setPasswordInput("");
+      setIsModalOpen(false);
+    } else if (pendingAction?.type === "edit" && passwordInput === "1234") {
+      setEditIndex(pendingAction.index);
       setIsAuthenticated(true);
       setError(null);
-      setPasswordInput(""); // Clear password field after successful submission
+      setPasswordInput("");
       setIsModalOpen(false);
     } else {
       setError("Incorrect password");
     }
   };
 
-  const handleDeleteInput = () => {
-    setPasswordInput(passwordInput.slice(0, -1));
+  const handleTogglePrice = () => {
+    if (isShowPrice) {
+      setIsShowPrice(false); // Hide the Buying Price
+    } else {
+      setPendingAction({ type: "showPrice" }); // Set action as show price
+      setIsModalOpen(true); // Open password modal
+    }
   };
 
   return (
@@ -104,109 +101,133 @@ const AllData = () => {
       </div>
 
       <div className="relative translate-y-1 min-h-screen bg-gray-900">
-  {/* Loader and Table */}
-  {isLoading ? (
-    <div className="flex justify-center items-center min-h-screen">
-      {/* Centered Loader */}
-      <div className="flex flex-col items-center space-y-4">
-        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin sm:w-20 sm:h-20"></div>
-        <p className="text-white text-sm sm:text-lg font-semibold text-center px-4">
-          Loading, please wait...
-        </p>
-      </div>
-    </div>
-  ) : (
-    <div className="fixed inset-0 translate-x-0 py-4 overflow-x-auto rounded shadow bg-gray-900">
-      <table className="w-full text-left bg-gray-800 rounded">
-        <thead className="bg-gray-700 text-gray-100 text-xs">
-          <tr>
-            <th className="px-4 py-2">Product Name</th>
-            <th className="px-4 py-2">For Mechanic</th>
-            <th className="px-4 py-2">For Customer</th>
-            <th className="px-4 py-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredData.map((row, index) => (
-            <tr
-              key={index}
-              className={`border-b border-gray-700 ${
-                index % 2 === 0 ? "bg-gray-900" : "bg-gray-800"
-              }`}
+        {isLoading ? (
+          <div className="flex justify-center items-center min-h-screen">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin sm:w-20 sm:h-20"></div>
+              <p className="text-white text-sm sm:text-lg font-semibold text-center px-4">
+                Loading, please wait...
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="fixed inset-0 translate-x-0 py-4 overflow-x-auto rounded shadow bg-gray-900">
+            <button
+              onClick={handleTogglePrice}
+              className="mb-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             >
-              <td className="px-4 py-2 text-sm">
-                {row["product name"] || ""}
-              </td>
-              <td className="px-4 py-2 text-sm">
-                {editIndex === index && isAuthenticated ? (
-                  <input
-                    type="text"
-                    value={editedData[index]?.["for mechanic"] || ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setEditedData((prevData) => {
-                        const updatedData = [...prevData];
-                        updatedData[index]["for mechanic"] = value;
-                        return updatedData;
-                      });
-                    }}
-                    className="w-full bg-transparent focus:outline-none text-gray-200 text-sm px-1 border-b border-gray-700 focus:border-blue-500"
-                  />
-                ) : (
-                  row["for mechanic"] || ""
-                )}
-              </td>
-              <td className="px-4 py-2 text-sm">
-                {editIndex === index && isAuthenticated ? (
-                  <input
-                    type="text"
-                    value={editedData[index]?.["for customer"] || ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setEditedData((prevData) => {
-                        const updatedData = [...prevData];
-                        updatedData[index]["for customer"] = value;
-                        return updatedData;
-                      });
-                    }}
-                    className="w-full bg-transparent focus:outline-none text-gray-200 text-sm px-1 border-b border-gray-700 focus:border-blue-500"
-                  />
-                ) : (
-                  row["for customer"] || ""
-                )}
-              </td>
-              <td className="px-4 py-2 text-sm">
-                {editIndex === index && isAuthenticated ? (
-                  <button
-                    onClick={handleSaveEdit}
-                    className="bg-green-500 text-white text-xs py-1 px-3 rounded hover:bg-green-600"
+              {isShowPrice ? "Hide Input Price" : "Show Input Price"}
+            </button>
+            <table className="w-full text-left bg-gray-800 rounded">
+              <thead className="bg-gray-700 text-gray-100 text-xs">
+                <tr>
+                  <th className="px-4 py-2">Product Name</th>
+                  <th className="px-4 py-2">For Mechanic</th>
+                  <th className="px-4 py-2">For Customer </th>
+                  {isShowPrice && <th className="px-4 py-2">Buying Price</th>}
+                  <th className="px-4 py-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredData.map((row, index) => (
+                  <tr
+                    key={index}
+                    className={`border-b border-gray-700 ${
+                      index % 2 === 0 ? "bg-gray-900" : "bg-gray-800"
+                    }`}
                   >
-                    Save
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleEditClick(index)}
-                    className=" text-white text-xs py-1 px-3 rounded hover:bg-blue-600"
-                  >
-                    <i class="fa-solid fa-pen-to-square"></i>
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )}
-</div>
+                    <td className="px-4 py-2 text-sm">
+                      {row["product name"] || ""}
+                    </td>
+                    <td className="px-4 py-2 text-sm">
+                      {editIndex === index ? (
+                        <input
+                          type="text"
+                          value={editedData[index]?.["for mechanic"] || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setEditedData((prevData) => {
+                              const updatedData = [...prevData];
+                              updatedData[index]["for mechanic"] = value;
+                              return updatedData;
+                            });
+                          }}
+                          className="w-full bg-transparent focus:outline-none text-gray-200 text-sm px-1 border-b border-gray-700 focus:border-blue-500"
+                        />
+                      ) : (
+                        row["for mechanic"] || ""
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-sm">
+                      {editIndex === index ? (
+                        <input
+                          type="text"
+                          value={editedData[index]?.["for costumer "] || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setEditedData((prevData) => {
+                              const updatedData = [...prevData];
+                              updatedData[index]["for costumer "] = value;
+                              return updatedData;
+                            });
+                          }}
+                          className="w-full bg-transparent focus:outline-none text-gray-200 text-sm px-1 border-b border-gray-700 focus:border-blue-500"
+                        />
+                      ) : (
+                        row["for costumer "] || ""
+                      )}
+                    </td>
+                    {isShowPrice && (
+                      <td className="px-4 py-2 text-sm">
+                        {editIndex === index ? (
+                          <input
+                            type="text"
+                            value={editedData[index]?.["buying price"] || ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setEditedData((prevData) => {
+                                const updatedData = [...prevData];
+                                updatedData[index]["buying price"] = value;
+                                return updatedData;
+                              });
+                            }}
+                            className="w-full bg-transparent focus:outline-none text-gray-200 text-sm px-1 border-b border-gray-700 focus:border-blue-500"
+                          />
+                        ) : (
+                          row["buying price"] || ""
+                        )}
+                      </td>
+                    )}
+                    <td className="px-4 py-2 text-sm">
+                      {editIndex === index ? (
+                        <button
+                          onClick={handleSaveEdit}
+                          className="bg-green-500 text-white text-xs py-1 px-3 rounded hover:bg-green-600"
+                        >
+                          Save
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleEditClick(index)}
+                          className="text-white text-xs py-1 px-3 rounded hover:bg-blue-600"
+                        >
+                          <i className="fa-solid fa-pen-to-square"></i>
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
-
-      {/* Modal Section */}
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-4 rounded shadow w-10/12 max-w-sm relative">
             <button
-              onClick={handleCloseModal}
+              onClick={() => setIsModalOpen(false)}
               className="absolute top-1 right-1 text-gray-500 hover:text-gray-700"
             >
               ✖
@@ -219,7 +240,9 @@ const AllData = () => {
                 {passwordInput || "Enter password"}
               </div>
               <button
-                onClick={handleDeleteInput}
+                onClick={() =>
+                  setPasswordInput(passwordInput.slice(0, -1))
+                }
                 className="bg-red-500 text-white py-1 rounded w-10 hover:bg-red-600 ml-2 text-xs"
               >
                 ⌫
@@ -230,7 +253,9 @@ const AllData = () => {
               {Array.from({ length: 9 }, (_, i) => (
                 <button
                   key={i + 1}
-                  onClick={() => handleKeypadInput((i + 1).toString())}
+                  onClick={() =>
+                    setPasswordInput((prev) => prev + (i + 1).toString())
+                  }
                   className="bg-gray-300 text-gray-800 py-2 rounded text-xs hover:bg-gray-400"
                 >
                   {i + 1}
@@ -238,7 +263,9 @@ const AllData = () => {
               ))}
               <button className="col-span-1" />
               <button
-                onClick={() => handleKeypadInput("0")}
+                onClick={() =>
+                  setPasswordInput((prev) => prev + "0")
+                }
                 className="bg-gray-300 text-gray-800 py-2 rounded text-xs hover:bg-gray-400 col-span-1"
               >
                 0
