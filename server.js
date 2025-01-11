@@ -3,9 +3,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import xlsx from 'xlsx';
 import cors from 'cors';
+import fs from 'fs';
 
 const app = express();
-const PORT = process.env.port|| 5000;
+const PORT = process.env.PORT || 5000;
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -17,36 +18,42 @@ app.use(cors());
 // Middleware to parse JSON data from the frontend
 app.use(express.json());
 
-// Path to the Excel file
-const filePath = path.join(__dirname, "public", "products.xlsx");
+// Paths to Excel files
+const productsFilePath = path.join(__dirname, "public", "products.xlsx");
+const remoteFilePath = path.join(__dirname, "public", "remote_data.xlsx");
 
 // Endpoint to get all products
 app.get('/api/products', (req, res) => {
   try {
-    const workbook = xlsx.readFile(filePath);
+    if (!fs.existsSync(productsFilePath)) {
+      return res.status(404).json({ error: 'Products file not found' });
+    }
+    const workbook = xlsx.readFile(productsFilePath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const allData = xlsx.utils.sheet_to_json(worksheet);
 
     res.json({ allData });
   } catch (error) {
-    console.error('Error reading Excel file:', error.message);
+    console.error('Error reading products file:', error.message);
     res.status(500).json({ error: 'Failed to fetch product data' });
   }
 });
 
-// Endpoint to get only remoteData
+// Endpoint to get only remote data
 app.get('/api/remote-data', (req, res) => {
   try {
-    const workbook = xlsx.readFile(filePath);
+    if (!fs.existsSync(remoteFilePath)) {
+      return res.status(404).json({ error: 'Remote data file not found' });
+    }
+    const workbook = xlsx.readFile(remoteFilePath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-    const allData = xlsx.utils.sheet_to_json(worksheet);
+    const remoteData = xlsx.utils.sheet_to_json(worksheet);
 
-    const remoteData = allData.filter(item => item.type === 'remote'); // Adjust based on your file structure
     res.json(remoteData);
   } catch (error) {
-    console.error('Error fetching remote data:', error.message);
+    console.error('Error reading remote data file:', error.message);
     res.status(500).json({ error: 'Failed to fetch remote data' });
   }
 });
@@ -57,7 +64,10 @@ app.put('/api/products/:index', (req, res) => {
   const updatedProduct = req.body;
 
   try {
-    const workbook = xlsx.readFile(filePath);
+    if (!fs.existsSync(productsFilePath)) {
+      return res.status(404).json({ error: 'Products file not found' });
+    }
+    const workbook = xlsx.readFile(productsFilePath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const allData = xlsx.utils.sheet_to_json(worksheet);
@@ -71,11 +81,11 @@ app.put('/api/products/:index', (req, res) => {
     const updatedWorksheet = xlsx.utils.json_to_sheet(allData);
     workbook.Sheets[sheetName] = updatedWorksheet;
 
-    xlsx.writeFile(workbook, filePath);
+    xlsx.writeFile(workbook, productsFilePath);
 
     res.json({ message: 'Product updated successfully!', updatedProduct });
   } catch (error) {
-    console.error('Error updating Excel file:', error.message);
+    console.error('Error updating products file:', error.message);
     res.status(500).json({ error: 'Failed to update the product' });
   }
 });
