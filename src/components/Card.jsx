@@ -15,7 +15,7 @@ const Card = ({ name, shelfNumber, image }) => {
       <div className="p-4">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-bold">{name}</h3>
-          <p className="text-sm font-bold text-yellow-400">Shelf: {shelfNumber}</p>
+          <p className="text-sm font-bold text-yellow-500">Shelf: {shelfNumber}</p>
         </div>
       </div>
     </div>
