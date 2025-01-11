@@ -23,7 +23,7 @@ app.use(express.json());
 app.use('/photos', express.static(path.join(__dirname, 'public', 'photos')));
 
 // Paths to Excel files
-const productsFilePath = path.join(__dirname, 'public', 'products.xlsx');
+const productsFilePath = path.join(__dirname, 'public', 'product.xlsx');
 const remoteFilePath = path.join(__dirname, 'public', 'remote_data.xlsx');
 
 // Multer configuration for file uploads
