@@ -1,11 +1,13 @@
-import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import xlsx from 'xlsx';
-import cors from 'cors';
-import fs from 'fs';
-import multer from 'multer';
-import simpleGit from 'simple-git';
+import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
+import xlsx from "xlsx";
+import cors from "cors";
+import multer from "multer";
+import axios from "axios";
+import dotenv from "dotenv";
+
+dotenv.config(); // Load environment variables from .env
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -14,23 +16,14 @@ const PORT = process.env.PORT || 5000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Enable CORS
+// Enable CORS and JSON parsing
 app.use(cors());
 app.use(express.json());
-
-// Static folder for serving uploaded images
-app.use('/photos', express.static(path.join(__dirname, 'public', 'photos')));
-
-// Paths to Excel files
-const remoteFilePath = path.join(__dirname, 'public', 'remote_data.xlsx');
 
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, 'public', 'photos');
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
+    const uploadPath = path.join(__dirname, "uploads");
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
@@ -40,39 +33,77 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-const git = simpleGit();
+// GitHub repository details
+const GITHUB_REPO = "Nishantvidhuri/surajelectronics";
+const BRANCH = "main";
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN; // Token from .env
+const FILE_PATH = "public/remote_data.xlsx";
 
-// Configure Git repository with PAT
-git.addConfig('http.extraheader', `Authorization: token ${process.env.GITHUB_TOKEN}`);
+// Helper function to get file content from GitHub
+const getFileFromGitHub = async () => {
+  try {
+    const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${FILE_PATH}`;
+    const response = await axios.get(url, {
+      headers: { Authorization: `Bearer ${GITHUB_TOKEN}` },
+    });
+    const fileContent = Buffer.from(response.data.content, "base64");
+    const sha = response.data.sha; // File SHA for updating later
+    return { fileContent, sha };
+  } catch (error) {
+    console.error("Error fetching file from GitHub:", error.message);
+    throw error;
+  }
+};
+
+// Helper function to update file content on GitHub
+const updateFileOnGitHub = async (updatedContent, sha) => {
+  try {
+    const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${FILE_PATH}`;
+    const base64Content = Buffer.from(updatedContent).toString("base64");
+    await axios.put(
+      url,
+      {
+        message: "Updated remote data",
+        content: base64Content,
+        sha,
+        branch: BRANCH,
+      },
+      {
+        headers: { Authorization: `Bearer ${GITHUB_TOKEN}` },
+      }
+    );
+  } catch (error) {
+    console.error("Error updating file on GitHub:", error.message);
+    throw error;
+  }
+};
 
 // Endpoint to fetch all remote data
-app.get('/api/remote-data', (req, res) => {
+app.get("/api/remote-data", async (req, res) => {
   try {
-    if (!fs.existsSync(remoteFilePath)) {
-      return res.status(404).json({ error: 'Remote data file not found' });
-    }
-    const workbook = xlsx.readFile(remoteFilePath);
+    const { fileContent } = await getFileFromGitHub();
+    const workbook = xlsx.read(fileContent, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const allData = xlsx.utils.sheet_to_json(worksheet);
 
-    res.json( allData );
+    res.json(allData);
   } catch (error) {
-    console.error('Error reading remote data file:', error.message);
-    res.status(500).json({ error: 'Failed to fetch remote data' });
+    res.status(500).json({ error: "Failed to fetch remote data" });
   }
 });
 
 // Endpoint to add new remote data
-app.post('/api/add-remote', upload.single('image'), async (req, res) => {
+app.post("/api/add-remote", upload.single("image"), async (req, res) => {
   try {
     const { name, shelfNumber } = req.body;
 
     if (!name || !shelfNumber || !req.file) {
-      return res.status(400).json({ error: 'All fields are required' });
+      return res.status(400).json({ error: "All fields are required" });
     }
 
-    const workbook = xlsx.readFile(remoteFilePath);
+    const { fileContent, sha } = await getFileFromGitHub();
+    const workbook = xlsx.read(fileContent, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const allData = xlsx.utils.sheet_to_json(worksheet);
@@ -87,18 +118,13 @@ app.post('/api/add-remote', upload.single('image'), async (req, res) => {
 
     const updatedWorksheet = xlsx.utils.json_to_sheet(allData);
     workbook.Sheets[sheetName] = updatedWorksheet;
-    xlsx.writeFile(workbook, remoteFilePath);
+    const updatedContent = xlsx.write(workbook, { type: "buffer", bookType: "xlsx" });
 
-    // Commit and push changes to GitHub
-    await git.add('./public/photos/*');
-    await git.add('./public/*.xlsx');
-    await git.commit('Added new remote data');
-    await git.push(process.env.REPO_URL, 'main');
+    await updateFileOnGitHub(updatedContent, sha);
 
-    res.status(200).json({ message: 'Remote added successfully', data: newData });
+    res.status(200).json({ message: "Remote added successfully", data: newData });
   } catch (error) {
-    console.error('Error adding remote:', error.message);
-    res.status(500).json({ error: 'Failed to add remote' });
+    res.status(500).json({ error: "Failed to add remote" });
   }
 });
 
