@@ -10,7 +10,7 @@ const TVRemotes = ({ searchQuery }) => {
     // Fetch remote data from the backend API
     const fetchRemoteData = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/remote-data");
+        const response = await fetch("https://surajelectronics.onrender.com/api/remote-data");
         if (!response.ok) {
           throw new Error("Failed to fetch remote data");
         }

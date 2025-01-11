@@ -17,7 +17,7 @@ export const ProductProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get("http://localhost:5000/api/products");
+        const response = await axios.get("https://surajelectronics.onrender.com/api/products");
         setRemoteData(response.data.remoteData || []);
         setAllData(response.data.allData || []);
       } catch (error) {
@@ -35,7 +35,7 @@ export const ProductProvider = ({ children }) => {
   const updateProduct = async (index, updatedProduct) => {
     try {
       const response = await axios.put(
-        `http://localhost:5000/api/products/${index}`,
+        `https://surajelectronics.onrender.com/api/products/${index}`,
         updatedProduct
       );
       console.log(response.data.message);
