@@ -5,7 +5,7 @@ import xlsx from 'xlsx';
 import cors from 'cors';
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.port|| 5000;
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
