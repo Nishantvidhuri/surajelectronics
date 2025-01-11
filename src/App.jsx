@@ -19,7 +19,7 @@ const App = () => {
             <Route path="/" element={<Home />} />
             <Route path="/remotes" element={<TVRemotes searchQuery={searchQuery} />} />
             <Route path="/stands" element={<Stand />} />
-            <Route path="/all-data" element={<AllData />} />
+            <Route path="/all-data" element={<AllData searchQuery={searchQuery} />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </div>

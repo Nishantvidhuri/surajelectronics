@@ -1,93 +1,73 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { useProductContext } from "../context/ProductContext";
 
 const AllData = () => {
-  const [data, setData] = useState([]);
+  const { remoteData, allData, setAllData } = useProductContext();
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [editIndex, setEditIndex] = useState(null);
   const [editedData, setEditedData] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [editIndex, setEditIndex] = useState(null); // Track the index of the item being edited
-  const [isLoading, setIsLoading] = useState(true); // Track the loading state
 
-  const correctPassword = "8826275828"; // The predefined password
-
-  // Fetch data from the backend
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get("http://localhost:5000/api/products");
-        setData(response.data);
-        setEditedData(response.data);
-        setIsLoading(false); // Set loading to false after data is fetched
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setIsLoading(false); // Set loading to false in case of an error
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  // Handle the password input change
-  const handleKeypadInput = (input) => {
-    setPasswordInput((prevInput) => prevInput + input);
-  };
-
-  // Handle delete input (backspace)
-  const handleDeleteInput = () => {
-    setPasswordInput((prevInput) => prevInput.slice(0, -1));
-  };
-
-  // Handle modal close
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setPasswordInput(""); // Clear password input on close
-    setError(""); // Clear error on close
-  };
-
-  // Handle password submission
-  const handlePasswordSubmit = () => {
-    if (passwordInput === correctPassword) {
-      setIsAuthenticated(true); // Password is correct
-      setIsModalOpen(false); // Close modal
-    } else {
-      setError("Incorrect password. Please try again.");
+    if (allData.length > 0) {
+      setIsLoading(false);
+      setEditedData(allData.map((item) => ({ ...item }))); // Initialize editedData properly
     }
-  };
+  }, [allData]);
 
-  // Start editing a specific item and open the password modal
-  const handleEditClick = (index) => {
-    setEditIndex(index); // Set the index of the row being edited
-    setIsModalOpen(true); // Show the modal to enter password
-  };
-
-  // Handle save edited data
-  const handleSaveEdit = async () => {
-    if (editIndex !== null && isAuthenticated) {
-      try {
-        const updatedData = [...editedData];
-        const response = await axios.put(
-          `http://localhost:5000/api/products/${editIndex}`,
-          updatedData[editIndex]
-        );
-        console.log("Backend Response:", response.data);
-        setEditIndex(null); // Reset edit mode after saving
-      } catch (error) {
-        console.error("Error saving data:", error.response ? error.response.data : error);
-        alert("Failed to save changes.");
-      }
-    }
-  };
-
-  // Filter the data based on the search query
-  const filteredData = editedData.filter((item) =>
-    Object.values(item).some((value) =>
+  const filteredData = allData.filter((item) =>
+    Object.values(item || {}).some((value) =>
       value?.toString().toLowerCase().includes(searchQuery.toLowerCase())
     )
   );
+
+  const handleEditClick = (index) => {
+    setEditIndex(index);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editedData[editIndex]) {
+      alert("Error: No data to save.");
+      return;
+    }
+
+    const updatedData = [...allData];
+    updatedData[editIndex] = { ...editedData[editIndex] };
+
+    setAllData(updatedData);
+    setEditedData(updatedData);
+    setIsModalOpen(false);
+    setEditIndex(null);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setPasswordInput("");
+    setError(null);
+  };
+
+  const handleKeypadInput = (digit) => {
+    setPasswordInput((prevInput) => prevInput + digit);
+  };
+
+  const handlePasswordSubmit = () => {
+    if (passwordInput === "1234") {
+      setIsAuthenticated(true);
+      setError(null);
+      setIsModalOpen(false);
+    } else {
+      setError("Incorrect password");
+    }
+  };
+
+  const handleDeleteInput = () => {
+    setPasswordInput(passwordInput.slice(0, -1));
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-200 py-8 px-4">
@@ -95,7 +75,6 @@ const AllData = () => {
         Product Management
       </h1>
 
-      {/* Search Bar */}
       <div className="mb-6">
         <input
           type="text"
@@ -106,13 +85,11 @@ const AllData = () => {
         />
       </div>
 
-      {/* Show Loading Indicator if Data is Still Loading */}
       {isLoading ? (
         <div className="flex justify-center items-center py-10">
           <div className="text-white text-xl">Loading...</div>
         </div>
       ) : (
-        // Editable Table
         <div className="overflow-x-auto rounded-lg shadow-lg">
           <table className="w-full text-left bg-gray-800 rounded-lg">
             <thead className="bg-gray-700 text-gray-100">
@@ -131,58 +108,57 @@ const AllData = () => {
                     index % 2 === 0 ? "bg-gray-900" : "bg-gray-800"
                   }`}
                 >
+                  <td className="px-6 py-4">{row["product name"] || ""}</td>
                   <td className="px-6 py-4">
                     {editIndex === index && isAuthenticated ? (
                       <input
                         type="text"
-                        value={row["product name"] || ""}
+                        value={
+                          editedData[index]?.["for mechanic"] ||
+                          row["for mechanic"] ||
+                          ""
+                        }
                         onChange={(e) =>
                           setEditedData((prevData) => {
                             const updatedData = [...prevData];
-                            updatedData[index]["product name"] = e.target.value;
+                            if (!updatedData[index]) {
+                              updatedData[index] = { ...row };
+                            }
+                            updatedData[index]["for mechanic"] =
+                              e.target.value;
                             return updatedData;
                           })
                         }
                         className="w-full bg-transparent focus:outline-none text-gray-200 px-2 py-1 border-b border-gray-700 focus:border-blue-500"
                       />
                     ) : (
-                      row["product name"]
+                      row["for mechanic"] || ""
                     )}
                   </td>
                   <td className="px-6 py-4">
                     {editIndex === index && isAuthenticated ? (
                       <input
                         type="text"
-                        value={row["for mechanic"] || ""}
+                        value={
+                          editedData[index]?.["for customer"] ||
+                          row["for customer"] ||
+                          ""
+                        }
                         onChange={(e) =>
                           setEditedData((prevData) => {
                             const updatedData = [...prevData];
-                            updatedData[index]["for mechanic"] = e.target.value;
+                            if (!updatedData[index]) {
+                              updatedData[index] = { ...row };
+                            }
+                            updatedData[index]["for customer"] =
+                              e.target.value;
                             return updatedData;
                           })
                         }
                         className="w-full bg-transparent focus:outline-none text-gray-200 px-2 py-1 border-b border-gray-700 focus:border-blue-500"
                       />
                     ) : (
-                      row["for mechanic"]
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    {editIndex === index && isAuthenticated ? (
-                      <input
-                        type="text"
-                        value={row["for costumer "] || ""}
-                        onChange={(e) =>
-                          setEditedData((prevData) => {
-                            const updatedData = [...prevData];
-                            updatedData[index]["for costumer "] = e.target.value;
-                            return updatedData;
-                          })
-                        }
-                        className="w-full bg-transparent focus:outline-none text-gray-200 px-2 py-1 border-b border-gray-700 focus:border-blue-500"
-                      />
-                    ) : (
-                      row["for costumer "]
+                      row["for customer"] || ""
                     )}
                   </td>
                   <td className="px-6 py-4">
@@ -209,7 +185,6 @@ const AllData = () => {
         </div>
       )}
 
-      {/* Modal for Password Entry */}
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-8 rounded-lg shadow-lg w-11/12 max-w-md relative">
