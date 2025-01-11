@@ -56,7 +56,7 @@ app.get('/api/remote-data', (req, res) => {
     const worksheet = workbook.Sheets[sheetName];
     const allData = xlsx.utils.sheet_to_json(worksheet);
 
-    res.json({ allData });
+    res.json( allData );
   } catch (error) {
     console.error('Error reading remote data file:', error.message);
     res.status(500).json({ error: 'Failed to fetch remote data' });
