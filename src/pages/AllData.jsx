@@ -186,9 +186,9 @@ const AllData = () => {
                 ) : (
                   <button
                     onClick={() => handleEditClick(index)}
-                    className="bg-blue-500 text-white text-xs py-1 px-3 rounded hover:bg-blue-600"
+                    className=" text-white text-xs py-1 px-3 rounded hover:bg-blue-600"
                   >
-                    ✏️ Edit
+                    <i class="fa-solid fa-pen-to-square"></i>
                   </button>
                 )}
               </td>
