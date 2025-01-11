@@ -2,50 +2,85 @@ import React, { useState, useEffect } from "react";
 import Card from "../components/Card";
 
 const TVRemotes = ({ searchQuery }) => {
-  const [remoteData, setRemoteData] = useState([]); // State to store remote data
-  const [loading, setLoading] = useState(true); // Loading state
-  const [error, setError] = useState(null); // Error state
+  const [remoteData, setRemoteData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false); // Modal state
+  const [newRemote, setNewRemote] = useState({
+    photo: null,
+    name: "",
+    shelfNumber: "",
+  });
 
   useEffect(() => {
-    // Fetch remote data from the backend API
     const fetchRemoteData = async () => {
       try {
-        const response = await fetch("https://surajelectronics.onrender.com/api/remote-data");
+        const response = await fetch(
+          "https://surajelectronics.onrender.com/api/remote-data"
+        );
         if (!response.ok) {
           throw new Error("Failed to fetch remote data");
         }
         const data = await response.json();
-        setRemoteData(data); // Set the remote data
+        setRemoteData(data);
       } catch (err) {
-        setError(err.message); // Handle errors
+        setError(err.message);
       } finally {
-        setLoading(false); // Update loading state
+        setLoading(false);
       }
     };
 
     fetchRemoteData();
   }, []);
 
-  // Handle loading and error states
-  if (loading) {
-    return <p>Loading products...</p>;
-  }
+  const handleAddRemote = async () => {
+    if (!newRemote.photo || !newRemote.name || !newRemote.shelfNumber) {
+      alert("All fields are required!");
+      return;
+    }
 
-  if (error) {
-    return <p>Error: {error}</p>;
-  }
+    try {
+      // Create FormData to handle file upload
+      const formData = new FormData();
+      formData.append("photo", newRemote.photo);
+      formData.append("name", newRemote.name);
+      formData.append("shelfNumber", newRemote.shelfNumber);
 
-  // Filter based on search query (if provided)
+      // Send POST request to the backend
+      const response = await fetch(
+        "https://surajelectronics.onrender.com/api/add-remote",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to add new remote");
+      }
+
+      // Fetch updated data after successful addition
+      const updatedData = await response.json();
+      setRemoteData(updatedData);
+      setIsModalOpen(false);
+      setNewRemote({ photo: null, name: "", shelfNumber: "" });
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    }
+  };
+
   const filteredRemotes = remoteData.filter((remote) =>
     remote.name.toLowerCase().includes(searchQuery?.toLowerCase() || "")
   );
 
-  // Sort filtered remotes by shelf number
   const sortedRemotes = filteredRemotes.sort((a, b) => {
     const shelfA = parseInt(a.shelfNumber.replace(/\D/g, "")) || 0;
     const shelfB = parseInt(b.shelfNumber.replace(/\D/g, "")) || 0;
     return shelfA - shelfB;
   });
+
+  if (loading) return <p>Loading products...</p>;
+  if (error) return <p>Error: {error}</p>;
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -55,10 +90,74 @@ const TVRemotes = ({ searchQuery }) => {
           <p>No TV remotes found matching your search.</p>
         ) : (
           sortedRemotes.map((remote, index) => (
-            <Card key={index} {...remote} /> // Spread the remote data into the Card component
+            <Card key={index} {...remote} />
           ))
         )}
       </div>
+
+      {/* Floating Add Button */}
+      <button
+        onClick={() => setIsModalOpen(true)}
+        className="fixed bottom-6 right-6 bg-yellow-500 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:bg-yellow-600 focus:outline-none"
+      >
+        +
+      </button>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-md w-11/12 max-w-md">
+            <h3 className="text-xl font-bold mb-4">Add New Remote</h3>
+            <div className="mb-4">
+              <label className="block text-gray-700 mb-2">Photo:</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) =>
+                  setNewRemote({ ...newRemote, photo: e.target.files[0] })
+                }
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-gray-700 mb-2">Name:</label>
+              <input
+                type="text"
+                value={newRemote.name}
+                onChange={(e) =>
+                  setNewRemote({ ...newRemote, name: e.target.value })
+                }
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-gray-700 mb-2">Shelf Number:</label>
+              <input
+                type="text"
+                value={newRemote.shelfNumber}
+                onChange={(e) =>
+                  setNewRemote({ ...newRemote, shelfNumber: e.target.value })
+                }
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddRemote}
+                className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
