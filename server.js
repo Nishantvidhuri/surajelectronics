@@ -22,7 +22,6 @@ app.use(express.json());
 app.use('/photos', express.static(path.join(__dirname, 'public', 'photos')));
 
 // Paths to Excel files
-const productsFilePath = path.join(__dirname, 'public', 'products.xlsx');
 const remoteFilePath = path.join(__dirname, 'public', 'remote_data.xlsx');
 
 // Multer configuration for file uploads
@@ -46,25 +45,25 @@ const git = simpleGit();
 // Configure Git repository with PAT
 git.addConfig('http.extraheader', `Authorization: token ${process.env.GITHUB_TOKEN}`);
 
-// Endpoint to get all products
-app.get('/api/products', (req, res) => {
+// Endpoint to fetch all remote data
+app.get('/api/remote-data', (req, res) => {
   try {
-    if (!fs.existsSync(productsFilePath)) {
-      return res.status(404).json({ error: 'Products file not found' });
+    if (!fs.existsSync(remoteFilePath)) {
+      return res.status(404).json({ error: 'Remote data file not found' });
     }
-    const workbook = xlsx.readFile(productsFilePath);
+    const workbook = xlsx.readFile(remoteFilePath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const allData = xlsx.utils.sheet_to_json(worksheet);
 
     res.json({ allData });
   } catch (error) {
-    console.error('Error reading products file:', error.message);
-    res.status(500).json({ error: 'Failed to fetch product data' });
+    console.error('Error reading remote data file:', error.message);
+    res.status(500).json({ error: 'Failed to fetch remote data' });
   }
 });
 
-// Endpoint to add a new remote
+// Endpoint to add new remote data
 app.post('/api/add-remote', upload.single('image'), async (req, res) => {
   try {
     const { name, shelfNumber } = req.body;
