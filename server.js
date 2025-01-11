@@ -19,29 +19,35 @@ app.use(cors());
 // Middleware to parse JSON data from the frontend
 app.use(express.json());
 
-// Multer setup for file uploads
-const upload = multer({
-  dest: path.join(__dirname, 'public/photos'),
-});
+// Static folder for serving uploaded images
+app.use('/photos', express.static(path.join(__dirname, 'public', 'photos')));
 
 // Paths to Excel files
-const productsFilePath = path.join(__dirname, "public", "products.xlsx");
-const remoteFilePath = path.join(__dirname, "public", "remote_data.xlsx");
+const productsFilePath = path.join(__dirname, 'public', 'products.xlsx');
+const remoteFilePath = path.join(__dirname, 'public', 'remote_data.xlsx');
 
-// Utility function to ensure file exists or create it
-const ensureExcelFile = (filePath, sheetName) => {
-  if (!fs.existsSync(filePath)) {
-    const workbook = xlsx.utils.book_new();
-    const worksheet = xlsx.utils.json_to_sheet([]);
-    xlsx.utils.book_append_sheet(workbook, worksheet, sheetName);
-    xlsx.writeFile(workbook, filePath);
-  }
-};
+// Multer configuration for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, 'public', 'photos');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}-${file.originalname}`;
+    cb(null, uniqueName);
+  },
+});
+const upload = multer({ storage });
 
 // Endpoint to get all products
 app.get('/api/products', (req, res) => {
   try {
-    ensureExcelFile(productsFilePath, 'Products');
+    if (!fs.existsSync(productsFilePath)) {
+      return res.status(404).json({ error: 'Products file not found' });
+    }
     const workbook = xlsx.readFile(productsFilePath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
@@ -57,7 +63,9 @@ app.get('/api/products', (req, res) => {
 // Endpoint to get only remote data
 app.get('/api/remote-data', (req, res) => {
   try {
-    ensureExcelFile(remoteFilePath, 'RemoteData');
+    if (!fs.existsSync(remoteFilePath)) {
+      return res.status(404).json({ error: 'Remote data file not found' });
+    }
     const workbook = xlsx.readFile(remoteFilePath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
@@ -70,13 +78,51 @@ app.get('/api/remote-data', (req, res) => {
   }
 });
 
+// Endpoint to add a new remote
+app.post('/api/add-remote', upload.single('image'), (req, res) => {
+  try {
+    const { name, shelfNumber } = req.body;
+
+    if (!name || !shelfNumber || !req.file) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    // Read the current data from the Excel file
+    const workbook = xlsx.readFile(remoteFilePath);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const allData = xlsx.utils.sheet_to_json(worksheet);
+
+    // Add new data to the array
+    const newData = {
+      name,
+      shelfNumber,
+      imagePath: `/photos/${req.file.filename}`,
+    };
+
+    allData.push(newData);
+
+    // Write the updated data back to the Excel file
+    const updatedWorksheet = xlsx.utils.json_to_sheet(allData);
+    workbook.Sheets[sheetName] = updatedWorksheet;
+    xlsx.writeFile(workbook, remoteFilePath);
+
+    res.status(200).json({ message: 'Remote added successfully', data: newData });
+  } catch (error) {
+    console.error('Error adding remote:', error.message);
+    res.status(500).json({ error: 'Failed to add remote' });
+  }
+});
+
 // Endpoint to update a specific product
 app.put('/api/products/:index', (req, res) => {
   const { index } = req.params;
   const updatedProduct = req.body;
 
   try {
-    ensureExcelFile(productsFilePath, 'Products');
+    if (!fs.existsSync(productsFilePath)) {
+      return res.status(404).json({ error: 'Products file not found' });
+    }
     const workbook = xlsx.readFile(productsFilePath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
@@ -97,43 +143,6 @@ app.put('/api/products/:index', (req, res) => {
   } catch (error) {
     console.error('Error updating products file:', error.message);
     res.status(500).json({ error: 'Failed to update the product' });
-  }
-});
-
-// Endpoint to add a new remote
-app.post('/api/remote-data', upload.single('image'), (req, res) => {
-  const { name, shelfNumber } = req.body;
-  const image = req.file;
-
-  if (!name || !shelfNumber || !image) {
-    return res.status(400).json({ error: 'Name, shelf number, and image are required' });
-  }
-
-  try {
-    ensureExcelFile(remoteFilePath, 'RemoteData');
-
-    const workbook = xlsx.readFile(remoteFilePath);
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const remoteData = xlsx.utils.sheet_to_json(worksheet);
-
-    const newRemote = {
-      name,
-      shelfNumber,
-      imagePath: `/photos/${image.filename}`, // Save relative image path
-    };
-
-    remoteData.push(newRemote);
-
-    const updatedWorksheet = xlsx.utils.json_to_sheet(remoteData);
-    workbook.Sheets[sheetName] = updatedWorksheet;
-
-    xlsx.writeFile(workbook, remoteFilePath);
-
-    res.json({ message: 'Remote added successfully!', newRemote });
-  } catch (error) {
-    console.error('Error adding new remote:', error.message);
-    res.status(500).json({ error: 'Failed to add new remote' });
   }
 });
 
