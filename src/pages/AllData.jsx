@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useProductContext } from "../context/ProductContext";
 
 const AllData = () => {
-  const { remoteData, allData, setAllData } = useProductContext();
+  const { allData, setAllData, updateProduct } = useProductContext(); // Import updateProduct
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [editIndex, setEditIndex] = useState(null);
@@ -27,27 +27,42 @@ const AllData = () => {
 
   const handleEditClick = (index) => {
     setEditIndex(index);
-    setIsModalOpen(true);
+    setIsModalOpen(true); // Open modal for password input
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editedData[editIndex]) {
       alert("Error: No data to save.");
       return;
     }
 
-    const updatedData = [...allData];
-    updatedData[editIndex] = { ...editedData[editIndex] };
+    if (!isAuthenticated) {
+      alert("Authentication required to save changes.");
+      return;
+    }
 
-    setAllData(updatedData);
-    setEditedData(updatedData);
-    setIsModalOpen(false);
-    setEditIndex(null);
+    const updatedProduct = { ...editedData[editIndex] };
+
+    try {
+      // Call the backend to update the Excel sheet
+      await updateProduct(editIndex, updatedProduct);
+
+      // Update frontend state
+      const updatedData = [...allData];
+      updatedData[editIndex] = updatedProduct;
+      setAllData(updatedData);
+      setEditedData(updatedData);
+      setIsModalOpen(false);
+      setEditIndex(null);
+    } catch (error) {
+      console.error("Error saving product:", error.message);
+      alert("Failed to save the product. Please try again.");
+    }
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setPasswordInput("");
+    setPasswordInput(""); // Clear password field when modal closes
     setError(null);
   };
 
@@ -59,6 +74,7 @@ const AllData = () => {
     if (passwordInput === "1234") {
       setIsAuthenticated(true);
       setError(null);
+      setPasswordInput(""); // Clear password field after successful submission
       setIsModalOpen(false);
     } else {
       setError("Incorrect password");
@@ -113,22 +129,18 @@ const AllData = () => {
                     {editIndex === index && isAuthenticated ? (
                       <input
                         type="text"
-                        value={
-                          editedData[index]?.["for mechanic"] ||
-                          row["for mechanic"] ||
-                          ""
-                        }
-                        onChange={(e) =>
+                        value={editedData[index]?.["for mechanic"] || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
                           setEditedData((prevData) => {
                             const updatedData = [...prevData];
                             if (!updatedData[index]) {
                               updatedData[index] = { ...row };
                             }
-                            updatedData[index]["for mechanic"] =
-                              e.target.value;
+                            updatedData[index]["for mechanic"] = value;
                             return updatedData;
-                          })
-                        }
+                          });
+                        }}
                         className="w-full bg-transparent focus:outline-none text-gray-200 px-2 py-1 border-b border-gray-700 focus:border-blue-500"
                       />
                     ) : (
@@ -139,22 +151,18 @@ const AllData = () => {
                     {editIndex === index && isAuthenticated ? (
                       <input
                         type="text"
-                        value={
-                          editedData[index]?.["for customer"] ||
-                          row["for customer"] ||
-                          ""
-                        }
-                        onChange={(e) =>
+                        value={editedData[index]?.["for customer"] || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
                           setEditedData((prevData) => {
                             const updatedData = [...prevData];
                             if (!updatedData[index]) {
                               updatedData[index] = { ...row };
                             }
-                            updatedData[index]["for customer"] =
-                              e.target.value;
+                            updatedData[index]["for customer"] = value;
                             return updatedData;
-                          })
-                        }
+                          });
+                        }}
                         className="w-full bg-transparent focus:outline-none text-gray-200 px-2 py-1 border-b border-gray-700 focus:border-blue-500"
                       />
                     ) : (

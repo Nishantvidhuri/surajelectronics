@@ -2,8 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import xlsx from 'xlsx';
-import fs from 'fs'; // fs module to interact with the filesystem
-import cors from 'cors'; // Import cors for CORS support
+import cors from 'cors';
 
 const app = express();
 const PORT = 5000;
@@ -13,99 +12,74 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Enable CORS
-app.use(cors()); // Enable cross-origin requests
+app.use(cors());
 
 // Middleware to parse JSON data from the frontend
 app.use(express.json());
 
-// Define the endpoint to read the Excel file and return JSON
-app.get("/api/products", (req, res) => {
+// Path to the Excel file
+const filePath = path.join(__dirname, "public", "products.xlsx");
+
+// Endpoint to get all products
+app.get('/api/products', (req, res) => {
   try {
-    // Define the path to the Excel file
-    const filePath = path.join(__dirname, "public", "products.xlsx");
-
-    // Read the Excel file
     const workbook = xlsx.readFile(filePath);
-
-    // Assuming the first sheet contains the data
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
+    const allData = xlsx.utils.sheet_to_json(worksheet);
 
-    // Convert the worksheet to JSON
-    const jsonData = xlsx.utils.sheet_to_json(worksheet);
-
-    // Send the JSON response
-    res.json(jsonData);
+    res.json({ allData });
   } catch (error) {
-    console.error("Error reading Excel file:", error.message);
-    res.status(500).json({ error: "Failed to read the Excel file" });
+    console.error('Error reading Excel file:', error.message);
+    res.status(500).json({ error: 'Failed to fetch product data' });
   }
 });
 
-// Define the endpoint to get a specific product by index
-app.get("/api/products/:index", (req, res) => {
-  const { index } = req.params;
-
+// Endpoint to get only remoteData
+app.get('/api/remote-data', (req, res) => {
   try {
-    const filePath = path.join(__dirname, "public", "products.xlsx");
-
     const workbook = xlsx.readFile(filePath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
+    const allData = xlsx.utils.sheet_to_json(worksheet);
 
-    const jsonData = xlsx.utils.sheet_to_json(worksheet);
-
-    // Check if the index exists in the data
-    if (index < 0 || index >= jsonData.length) {
-      return res.status(404).json({ error: "Product not found at the specified index" });
-    }
-
-    // Return the specific product at the index
-    const product = jsonData[index];
-    res.json(product);
+    const remoteData = allData.filter(item => item.type === 'remote'); // Adjust based on your file structure
+    res.json(remoteData);
   } catch (error) {
-    console.error("Error reading Excel file:", error.message);
-    res.status(500).json({ error: "Failed to read the Excel file" });
+    console.error('Error fetching remote data:', error.message);
+    res.status(500).json({ error: 'Failed to fetch remote data' });
   }
 });
 
-// Define the endpoint to update a specific product in the Excel file
-app.put("/api/products/:index", (req, res) => {
+// Endpoint to update a specific product
+app.put('/api/products/:index', (req, res) => {
   const { index } = req.params;
-  const updatedData = req.body;
+  const updatedProduct = req.body;
 
   try {
-    const filePath = path.join(__dirname, "public", "products.xlsx");
-
     const workbook = xlsx.readFile(filePath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
+    const allData = xlsx.utils.sheet_to_json(worksheet);
 
-    const jsonData = xlsx.utils.sheet_to_json(worksheet);
-
-    // Check if the index exists in the data
-    if (index < 0 || index >= jsonData.length) {
-      return res.status(404).json({ error: "Product not found at the specified index" });
+    if (index < 0 || index >= allData.length) {
+      return res.status(404).json({ error: 'Product not found at the specified index' });
     }
 
-    // Update the data at the specified index
-    jsonData[index] = updatedData;
+    allData[index] = { ...allData[index], ...updatedProduct };
 
-    // Convert the updated data back to a worksheet format
-    const updatedWorksheet = xlsx.utils.json_to_sheet(jsonData);
+    const updatedWorksheet = xlsx.utils.json_to_sheet(allData);
     workbook.Sheets[sheetName] = updatedWorksheet;
 
-    // Write the updated workbook back to the file
     xlsx.writeFile(workbook, filePath);
 
-    res.json({ message: "Product updated successfully!" });
+    res.json({ message: 'Product updated successfully!', updatedProduct });
   } catch (error) {
-    console.error("Error saving Excel file:", error.message);
-    res.status(500).json({ error: "Failed to update the Excel file" });
+    console.error('Error updating Excel file:', error.message);
+    res.status(500).json({ error: 'Failed to update the product' });
   }
 });
 
-// Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

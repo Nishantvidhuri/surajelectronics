@@ -1,15 +1,38 @@
-import React from "react";
-import { useProductContext } from "../context/ProductContext";
+import React, { useState, useEffect } from "react";
 import Card from "../components/Card";
 
 const TVRemotes = ({ searchQuery }) => {
-  const { remoteData } = useProductContext();  // Access remote data from context
+  const [remoteData, setRemoteData] = useState([]); // State to store remote data
+  const [loading, setLoading] = useState(true); // Loading state
+  const [error, setError] = useState(null); // Error state
 
-  console.log(remoteData);  // You can remove this in production
+  useEffect(() => {
+    // Fetch remote data from the backend API
+    const fetchRemoteData = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/remote-data");
+        if (!response.ok) {
+          throw new Error("Failed to fetch remote data");
+        }
+        const data = await response.json();
+        setRemoteData(data); // Set the remote data
+      } catch (err) {
+        setError(err.message); // Handle errors
+      } finally {
+        setLoading(false); // Update loading state
+      }
+    };
 
-  // Add a check to make sure remoteData is defined
-  if (!remoteData) {
+    fetchRemoteData();
+  }, []);
+
+  // Handle loading and error states
+  if (loading) {
     return <p>Loading products...</p>;
+  }
+
+  if (error) {
+    return <p>Error: {error}</p>;
   }
 
   // Filter based on search query (if provided)
@@ -32,7 +55,7 @@ const TVRemotes = ({ searchQuery }) => {
           <p>No TV remotes found matching your search.</p>
         ) : (
           sortedRemotes.map((remote, index) => (
-            <Card key={index} {...remote} />  // Spread the remote data into the Card component
+            <Card key={index} {...remote} /> // Spread the remote data into the Card component
           ))
         )}
       </div>
