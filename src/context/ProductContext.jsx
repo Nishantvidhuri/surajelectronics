@@ -17,7 +17,7 @@ export const ProductProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get("https://surajelectronics.onrender.com/api/products");
+        const response = await axios.get("https://suraj-electronics.onrender.com/api/products");
         setRemoteData(response.data.remoteData || []);
         setAllData(response.data.allData || []);
       } catch (error) {
@@ -35,7 +35,7 @@ export const ProductProvider = ({ children }) => {
   const updateProduct = async (index, updatedProduct) => {
     try {
       const response = await axios.put(
-        `https://surajelectronics.onrender.com/api/products/${index}`,
+        `https://suraj-electronics.onrender.com/api/products/${index}`,
         updatedProduct
       );
       console.log(response.data.message);

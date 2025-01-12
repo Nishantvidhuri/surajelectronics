@@ -16,7 +16,7 @@ const TVRemotes = ({ searchQuery }) => {
     const fetchRemoteData = async () => {
       try {
         const response = await fetch(
-          "https://surajelectronics.onrender.com/api/remote-data"
+          "https://suraj-electronics.onrender.com/api/remote-data"
         );
         if (!response.ok) {
           throw new Error("Failed to fetch remote data");
@@ -48,7 +48,7 @@ const TVRemotes = ({ searchQuery }) => {
 
       // Send POST request to the backend
       const response = await fetch(
-        "https://surajelectronics.onrender.com/api/add-remote",
+        "https://suraj-electronics.onrender.com/api/add-remote",
         {
           method: "POST",
           body: formData,
