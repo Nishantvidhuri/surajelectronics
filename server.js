@@ -120,49 +120,39 @@ app.get('/api/remote-data', async (req, res) => {
 // Endpoint to add a new remote
 app.post('/api/add-remote', upload.single('photo'), async (req, res) => {
   try {
-    // Extract fields from the request
     const { name, shelfNumber } = req.body;
 
-    // Validate required fields
     if (!name || !shelfNumber || !req.file) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    // GitHub file path for the remote_data.xlsx file
     const filePath = 'public/remote_data.xlsx';
-
-    // Fetch the existing file from GitHub
     const fileData = await fetchFileFromGitHub(filePath);
 
-    // Decode the Base64 content of the file and load it into xlsx
     const workbook = xlsx.read(Buffer.from(fileData.content, 'base64'));
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const allData = xlsx.utils.sheet_to_json(worksheet);
 
-    // Add the new data to the `image` column
+    const imagePath = `/photos/${name}_${shelfNumber}${path.extname(req.file.originalname)}`;
+    const fallbackImagePath = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTUnvISVTYopMAy17o3mB2lfSPeEjoKfAdV2w&s';
+
     const newData = {
       name,
       shelfNumber,
-      image: `/photos/${req.file.filename}`, // Update the `image` column with the new image path
+      image: fs.existsSync(path.join(__dirname, 'public', imagePath)) ? imagePath : fallbackImagePath,
     };
 
     allData.push(newData);
 
-    // Convert the updated data back to an Excel sheet
     const updatedWorksheet = xlsx.utils.json_to_sheet(allData);
     workbook.Sheets[sheetName] = updatedWorksheet;
-
-    // Convert the workbook to a buffer
     const updatedContent = xlsx.write(workbook, { type: 'buffer' });
 
-    // Update the file on GitHub
     await updateFileOnGitHub(filePath, updatedContent, fileData.sha);
 
-    // Respond with the updated data
     res.status(200).json({ message: 'Remote added successfully', data: allData });
   } catch (error) {
-    // Log and respond with an error message
     console.error('Error adding remote:', error.message);
     res.status(500).json({ error: 'Failed to add remote' });
   }
