@@ -140,11 +140,11 @@ app.post('/api/add-remote', upload.single('photo'), async (req, res) => {
     const worksheet = workbook.Sheets[sheetName];
     const allData = xlsx.utils.sheet_to_json(worksheet);
 
-    // Add the new data
+    // Add the new data to the `image` column
     const newData = {
       name,
       shelfNumber,
-      image: `/photos/${req.file.filename}`, // Path to the uploaded image
+      image: `/photos/${req.file.filename}`, // Update the `image` column with the new image path
     };
 
     allData.push(newData);
