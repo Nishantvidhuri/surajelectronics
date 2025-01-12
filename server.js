@@ -27,8 +27,6 @@ const __dirname = path.dirname(__filename);
 
 // Enable CORS
 app.use(cors());
-
-// Middleware to parse JSON data from the frontend
 app.use(express.json());
 
 // Static folder for serving uploaded images
@@ -44,8 +42,8 @@ const storage = multer.diskStorage({
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${file.originalname}`;
-    cb(null, uniqueName);
+    // Use temporary filename; it will be renamed later
+    cb(null, file.originalname);
   },
 });
 const upload = multer({ storage });
@@ -110,6 +108,13 @@ app.post('/api/add-remote', upload.single('photo'), async (req, res) => {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
+    // Rename the uploaded file to the desired format
+    const fileExtension = path.extname(req.file.originalname);
+    const newFilename = `${name}_${shelfNumber}${fileExtension}`;
+    const newFilePath = path.join(uploadPath, newFilename);
+
+    fs.renameSync(req.file.path, newFilePath);
+
     const filePath = 'public/remote_data.xlsx';
     const fileData = await fetchFileFromGitHub(filePath);
 
@@ -121,7 +126,7 @@ app.post('/api/add-remote', upload.single('photo'), async (req, res) => {
     const newData = {
       name,
       shelfNumber,
-      imagePath: `/photos/${req.file.filename}`,
+      imagePath: `/photos/${newFilename}`,
     };
 
     allData.push(newData);
