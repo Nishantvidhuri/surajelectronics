@@ -1,25 +1,17 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import axios from 'axios';
+import xlsx from 'xlsx';
 import cors from 'cors';
+import fs from 'fs';
 import multer from 'multer';
-import dotenv from 'dotenv';
-
-// Load environment variables from .env file
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// GitHub repository configuration
-const GITHUB_OWNER = 'Nishantvidhuri';
-const GITHUB_REPO = 'surajelectronics';
-const GITHUB_BRANCH = 'main';
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN; // Loaded from environment variables
-
-// GitHub API base URL
-const GITHUB_API_BASE_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents`;
+// Get the directory name
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Enable CORS
 app.use(cors());
@@ -27,75 +19,67 @@ app.use(cors());
 // Middleware to parse JSON data from the frontend
 app.use(express.json());
 
+// Static folder for serving uploaded images
+app.use('/photos', express.static(path.join(__dirname, 'public', 'photos')));
+
+// Paths to Excel files
+const productsFilePath = path.join(__dirname, 'public', 'product.xlsx');
+const remoteFilePath = path.join(__dirname, 'public', 'remote_data.xlsx');
+
 // Multer configuration for file uploads
-const storage = multer.memoryStorage();
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, 'public', 'photos');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}-${file.originalname}`;
+    cb(null, uniqueName);
+  },
+});
 const upload = multer({ storage });
 
-// Helper to fetch file content from GitHub
-const fetchFileFromGitHub = async (filePath) => {
-  const url = `${GITHUB_API_BASE_URL}/${filePath}`;
-  try {
-    const response = await axios.get(url, {
-      headers: {
-        Authorization: `token ${GITHUB_TOKEN}`,
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching file from GitHub:', error.response?.data || error.message);
-    throw new Error('Failed to fetch file from GitHub');
-  }
-};
-
-// Helper to update file content on GitHub
-const updateFileOnGitHub = async (filePath, content, sha) => {
-  const url = `${GITHUB_API_BASE_URL}/${filePath}`;
-  try {
-    const response = await axios.put(
-      url,
-      {
-        message: `Update ${filePath}`,
-        content: Buffer.from(content).toString('base64'),
-        sha,
-        branch: GITHUB_BRANCH,
-      },
-      {
-        headers: {
-          Authorization: `token ${GITHUB_TOKEN}`,
-        },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    console.error('Error updating file on GitHub:', error.response?.data || error.message);
-    throw new Error('Failed to update file on GitHub');
-  }
-};
-
 // Endpoint to get all products
-app.get('/api/products', async (req, res) => {
+app.get('/api/products', (req, res) => {
   try {
-    const filePath = 'public/product.xlsx';
-    const fileData = await fetchFileFromGitHub(filePath);
-
-    // Debug: Log file data
-    console.log('File Data:', fileData);
-
-    // Convert Base64 to Excel
-    const workbook = xlsx.read(Buffer.from(fileData.content, 'base64'));
+    if (!fs.existsSync(productsFilePath)) {
+      return res.status(404).json({ error: 'Products file not found' });
+    }
+    const workbook = xlsx.readFile(productsFilePath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const allData = xlsx.utils.sheet_to_json(worksheet);
 
     res.json({ allData });
   } catch (error) {
-    console.error('Error in /api/products:', error.message);
+    console.error('Error reading products file:', error.message);
     res.status(500).json({ error: 'Failed to fetch product data' });
   }
 });
 
+// Endpoint to get only remote data
+app.get('/api/remote-data', (req, res) => {
+  try {
+    if (!fs.existsSync(remoteFilePath)) {
+      return res.status(404).json({ error: 'Remote data file not found' });
+    }
+    const workbook = xlsx.readFile(remoteFilePath);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const remoteData = xlsx.utils.sheet_to_json(worksheet);
+
+    res.json(remoteData);
+  } catch (error) {
+    console.error('Error reading remote data file:', error.message);
+    res.status(500).json({ error: 'Failed to fetch remote data' });
+  }
+});
+
 // Endpoint to add a new remote
-app.post('/api/add-remote', upload.single('image'), async (req, res) => {
+app.post('/api/add-remote', upload.single('image'), (req, res) => {
   try {
     const { name, shelfNumber } = req.body;
 
@@ -103,30 +87,25 @@ app.post('/api/add-remote', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    const filePath = 'public/remote_data.xlsx';
-    const fileData = await fetchFileFromGitHub(filePath);
-
-    // Convert Base64 content back to buffer and read as Excel file
-    const workbook = xlsx.read(Buffer.from(fileData.content, 'base64'));
+    // Read the current data from the Excel file
+    const workbook = xlsx.readFile(remoteFilePath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const allData = xlsx.utils.sheet_to_json(worksheet);
 
-    // Add new data
+    // Add new data to the array
     const newData = {
       name,
       shelfNumber,
-      imagePath: `/photos/${req.file.originalname}`,
+      imagePath: `/photos/${req.file.filename}`,
     };
+
     allData.push(newData);
 
-    // Update the Excel file
+    // Write the updated data back to the Excel file
     const updatedWorksheet = xlsx.utils.json_to_sheet(allData);
     workbook.Sheets[sheetName] = updatedWorksheet;
-    const updatedContent = xlsx.write(workbook, { type: 'buffer' });
-
-    // Upload updated file to GitHub
-    await updateFileOnGitHub(filePath, updatedContent, fileData.sha);
+    xlsx.writeFile(workbook, remoteFilePath);
 
     res.status(200).json({ message: 'Remote added successfully', data: newData });
   } catch (error) {
@@ -136,16 +115,15 @@ app.post('/api/add-remote', upload.single('image'), async (req, res) => {
 });
 
 // Endpoint to update a specific product
-app.put('/api/products/:index', async (req, res) => {
+app.put('/api/products/:index', (req, res) => {
   const { index } = req.params;
   const updatedProduct = req.body;
 
   try {
-    const filePath = 'public/product.xlsx';
-    const fileData = await fetchFileFromGitHub(filePath);
-
-    // Convert Base64 content back to buffer and read as Excel file
-    const workbook = xlsx.read(Buffer.from(fileData.content, 'base64'));
+    if (!fs.existsSync(productsFilePath)) {
+      return res.status(404).json({ error: 'Products file not found' });
+    }
+    const workbook = xlsx.readFile(productsFilePath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const allData = xlsx.utils.sheet_to_json(worksheet);
@@ -156,17 +134,14 @@ app.put('/api/products/:index', async (req, res) => {
 
     allData[index] = { ...allData[index], ...updatedProduct };
 
-    // Update the Excel file
     const updatedWorksheet = xlsx.utils.json_to_sheet(allData);
     workbook.Sheets[sheetName] = updatedWorksheet;
-    const updatedContent = xlsx.write(workbook, { type: 'buffer' });
 
-    // Upload updated file to GitHub
-    await updateFileOnGitHub(filePath, updatedContent, fileData.sha);
+    xlsx.writeFile(workbook, productsFilePath);
 
     res.json({ message: 'Product updated successfully!', updatedProduct });
   } catch (error) {
-    console.error('Error updating product:', error.message);
+    console.error('Error updating products file:', error.message);
     res.status(500).json({ error: 'Failed to update the product' });
   }
 });

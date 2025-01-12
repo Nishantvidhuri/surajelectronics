@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 5000;
 const GITHUB_OWNER = 'Nishantvidhuri';
 const GITHUB_REPO = 'surajelectronics';
 const GITHUB_BRANCH = 'main';
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN; // Loaded from .env
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN; // Loaded from environment variables
 
 // GitHub API base URL
 const GITHUB_API_BASE_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents`;
@@ -34,32 +34,42 @@ const upload = multer({ storage });
 // Helper to fetch file content from GitHub
 const fetchFileFromGitHub = async (filePath) => {
   const url = `${GITHUB_API_BASE_URL}/${filePath}`;
-  const response = await axios.get(url, {
-    headers: {
-      Authorization: `token ${GITHUB_TOKEN}`,
-    },
-  });
-  return response.data;
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching file from GitHub:', error.response?.data || error.message);
+    throw new Error('Failed to fetch file from GitHub');
+  }
 };
 
 // Helper to update file content on GitHub
 const updateFileOnGitHub = async (filePath, content, sha) => {
   const url = `${GITHUB_API_BASE_URL}/${filePath}`;
-  const response = await axios.put(
-    url,
-    {
-      message: `Update ${filePath}`,
-      content: Buffer.from(content).toString('base64'),
-      sha,
-      branch: GITHUB_BRANCH,
-    },
-    {
-      headers: {
-        Authorization: `token ${GITHUB_TOKEN}`,
+  try {
+    const response = await axios.put(
+      url,
+      {
+        message: `Update ${filePath}`,
+        content: Buffer.from(content).toString('base64'),
+        sha,
+        branch: GITHUB_BRANCH,
       },
-    }
-  );
-  return response.data;
+      {
+        headers: {
+          Authorization: `token ${GITHUB_TOKEN}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error updating file on GitHub:', error.response?.data || error.message);
+    throw new Error('Failed to update file on GitHub');
+  }
 };
 
 // Endpoint to get all products
@@ -68,7 +78,10 @@ app.get('/api/products', async (req, res) => {
     const filePath = 'public/product.xlsx';
     const fileData = await fetchFileFromGitHub(filePath);
 
-    // Convert base64 content back to buffer and read as Excel file
+    // Debug: Log file data
+    console.log('File Data:', fileData);
+
+    // Convert Base64 to Excel
     const workbook = xlsx.read(Buffer.from(fileData.content, 'base64'));
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
@@ -76,7 +89,7 @@ app.get('/api/products', async (req, res) => {
 
     res.json({ allData });
   } catch (error) {
-    console.error('Error reading products file:', error.message);
+    console.error('Error in /api/products:', error.message);
     res.status(500).json({ error: 'Failed to fetch product data' });
   }
 });
@@ -93,7 +106,7 @@ app.post('/api/add-remote', upload.single('image'), async (req, res) => {
     const filePath = 'public/remote_data.xlsx';
     const fileData = await fetchFileFromGitHub(filePath);
 
-    // Convert base64 content back to buffer and read as Excel file
+    // Convert Base64 content back to buffer and read as Excel file
     const workbook = xlsx.read(Buffer.from(fileData.content, 'base64'));
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
@@ -131,7 +144,7 @@ app.put('/api/products/:index', async (req, res) => {
     const filePath = 'public/product.xlsx';
     const fileData = await fetchFileFromGitHub(filePath);
 
-    // Convert base64 content back to buffer and read as Excel file
+    // Convert Base64 content back to buffer and read as Excel file
     const workbook = xlsx.read(Buffer.from(fileData.content, 'base64'));
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
