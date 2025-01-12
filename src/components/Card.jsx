@@ -1,6 +1,9 @@
 import React from "react";
 
 const Card = ({ name, shelfNumber, image }) => {
+  const fallbackImage =
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTUnvISVTYopMAy17o3mB2lfSPeEjoKfAdV2w&s";
+
   return (
     <div className="bg-gray-800 text-gray-100 shadow-lg rounded-lg overflow-hidden border border-gray-700">
       {/* Image Section */}
@@ -9,6 +12,10 @@ const Card = ({ name, shelfNumber, image }) => {
           className="w-full h-auto object-cover" // Ensure full width and adapt height
           src={image}
           alt={name}
+          onError={(e) => {
+            e.target.onerror = null; // Prevent infinite loop
+            e.target.src = fallbackImage; // Set fallback image
+          }}
         />
       </div>
       {/* Content Section */}
