@@ -144,7 +144,7 @@ app.post('/api/add-remote', upload.single('photo'), async (req, res) => {
     const newData = {
       name,
       shelfNumber,
-      imagePath: `/photos/${req.file.filename}`, // Path to the uploaded image
+      image: `/photos/${req.file.filename}`, // Path to the uploaded image
     };
 
     allData.push(newData);
