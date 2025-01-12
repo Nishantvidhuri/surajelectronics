@@ -1,17 +1,25 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import xlsx from 'xlsx';
+import axios from 'axios';
 import cors from 'cors';
-import fs from 'fs';
 import multer from 'multer';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Get the directory name
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// GitHub repository configuration
+const GITHUB_OWNER = 'Nishantvidhuri';
+const GITHUB_REPO = 'surajelectronics';
+const GITHUB_BRANCH = 'main';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN; // Loaded from .env
+
+// GitHub API base URL
+const GITHUB_API_BASE_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents`;
 
 // Enable CORS
 app.use(cors());
@@ -19,36 +27,49 @@ app.use(cors());
 // Middleware to parse JSON data from the frontend
 app.use(express.json());
 
-// Static folder for serving uploaded images
-app.use('/photos', express.static(path.join(__dirname, 'public', 'photos')));
-
-// Paths to Excel files
-const productsFilePath = path.join(__dirname, 'public', 'product.xlsx');
-const remoteFilePath = path.join(__dirname, 'public', 'remote_data.xlsx');
-
 // Multer configuration for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, 'public', 'photos');
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${file.originalname}`;
-    cb(null, uniqueName);
-  },
-});
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// Endpoint to get all products
-app.get('/api/products', (req, res) => {
-  try {
-    if (!fs.existsSync(productsFilePath)) {
-      return res.status(404).json({ error: 'Products file not found' });
+// Helper to fetch file content from GitHub
+const fetchFileFromGitHub = async (filePath) => {
+  const url = `${GITHUB_API_BASE_URL}/${filePath}`;
+  const response = await axios.get(url, {
+    headers: {
+      Authorization: `token ${GITHUB_TOKEN}`,
+    },
+  });
+  return response.data;
+};
+
+// Helper to update file content on GitHub
+const updateFileOnGitHub = async (filePath, content, sha) => {
+  const url = `${GITHUB_API_BASE_URL}/${filePath}`;
+  const response = await axios.put(
+    url,
+    {
+      message: `Update ${filePath}`,
+      content: Buffer.from(content).toString('base64'),
+      sha,
+      branch: GITHUB_BRANCH,
+    },
+    {
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+      },
     }
-    const workbook = xlsx.readFile(productsFilePath);
+  );
+  return response.data;
+};
+
+// Endpoint to get all products
+app.get('/api/products', async (req, res) => {
+  try {
+    const filePath = 'public/product.xlsx';
+    const fileData = await fetchFileFromGitHub(filePath);
+
+    // Convert base64 content back to buffer and read as Excel file
+    const workbook = xlsx.read(Buffer.from(fileData.content, 'base64'));
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const allData = xlsx.utils.sheet_to_json(worksheet);
@@ -60,26 +81,8 @@ app.get('/api/products', (req, res) => {
   }
 });
 
-// Endpoint to get only remote data
-app.get('/api/remote-data', (req, res) => {
-  try {
-    if (!fs.existsSync(remoteFilePath)) {
-      return res.status(404).json({ error: 'Remote data file not found' });
-    }
-    const workbook = xlsx.readFile(remoteFilePath);
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const remoteData = xlsx.utils.sheet_to_json(worksheet);
-
-    res.json(remoteData);
-  } catch (error) {
-    console.error('Error reading remote data file:', error.message);
-    res.status(500).json({ error: 'Failed to fetch remote data' });
-  }
-});
-
 // Endpoint to add a new remote
-app.post('/api/add-remote', upload.single('image'), (req, res) => {
+app.post('/api/add-remote', upload.single('image'), async (req, res) => {
   try {
     const { name, shelfNumber } = req.body;
 
@@ -87,25 +90,30 @@ app.post('/api/add-remote', upload.single('image'), (req, res) => {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    // Read the current data from the Excel file
-    const workbook = xlsx.readFile(remoteFilePath);
+    const filePath = 'public/remote_data.xlsx';
+    const fileData = await fetchFileFromGitHub(filePath);
+
+    // Convert base64 content back to buffer and read as Excel file
+    const workbook = xlsx.read(Buffer.from(fileData.content, 'base64'));
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const allData = xlsx.utils.sheet_to_json(worksheet);
 
-    // Add new data to the array
+    // Add new data
     const newData = {
       name,
       shelfNumber,
-      imagePath: `/photos/${req.file.filename}`,
+      imagePath: `/photos/${req.file.originalname}`,
     };
-
     allData.push(newData);
 
-    // Write the updated data back to the Excel file
+    // Update the Excel file
     const updatedWorksheet = xlsx.utils.json_to_sheet(allData);
     workbook.Sheets[sheetName] = updatedWorksheet;
-    xlsx.writeFile(workbook, remoteFilePath);
+    const updatedContent = xlsx.write(workbook, { type: 'buffer' });
+
+    // Upload updated file to GitHub
+    await updateFileOnGitHub(filePath, updatedContent, fileData.sha);
 
     res.status(200).json({ message: 'Remote added successfully', data: newData });
   } catch (error) {
@@ -115,15 +123,16 @@ app.post('/api/add-remote', upload.single('image'), (req, res) => {
 });
 
 // Endpoint to update a specific product
-app.put('/api/products/:index', (req, res) => {
+app.put('/api/products/:index', async (req, res) => {
   const { index } = req.params;
   const updatedProduct = req.body;
 
   try {
-    if (!fs.existsSync(productsFilePath)) {
-      return res.status(404).json({ error: 'Products file not found' });
-    }
-    const workbook = xlsx.readFile(productsFilePath);
+    const filePath = 'public/product.xlsx';
+    const fileData = await fetchFileFromGitHub(filePath);
+
+    // Convert base64 content back to buffer and read as Excel file
+    const workbook = xlsx.read(Buffer.from(fileData.content, 'base64'));
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const allData = xlsx.utils.sheet_to_json(worksheet);
@@ -134,14 +143,17 @@ app.put('/api/products/:index', (req, res) => {
 
     allData[index] = { ...allData[index], ...updatedProduct };
 
+    // Update the Excel file
     const updatedWorksheet = xlsx.utils.json_to_sheet(allData);
     workbook.Sheets[sheetName] = updatedWorksheet;
+    const updatedContent = xlsx.write(workbook, { type: 'buffer' });
 
-    xlsx.writeFile(workbook, productsFilePath);
+    // Upload updated file to GitHub
+    await updateFileOnGitHub(filePath, updatedContent, fileData.sha);
 
     res.json({ message: 'Product updated successfully!', updatedProduct });
   } catch (error) {
-    console.error('Error updating products file:', error.message);
+    console.error('Error updating product:', error.message);
     res.status(500).json({ error: 'Failed to update the product' });
   }
 });
