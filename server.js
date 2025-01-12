@@ -208,13 +208,25 @@ app.put('/api/products/:index', async (req, res) => {
       return res.status(404).json({ error: 'Product not found at the specified index' });
     }
 
+    // Update the product data
     allData[index] = { ...allData[index], ...updatedProduct };
 
+    // Write updated data back to the Excel file
     const updatedWorksheet = xlsx.utils.json_to_sheet(allData);
     workbook.Sheets[sheetName] = updatedWorksheet;
     const updatedContent = xlsx.write(workbook, { type: 'buffer' });
 
-    await updateFileOnGitHub(filePath, updatedContent, fileData.sha);
+    try {
+      const response = await updateFileOnGitHub(filePath, updatedContent, fileData.sha);
+      console.log('GitHub API Response:', response);
+
+      // Re-fetch the updated file for confirmation (optional)
+      const updatedFileData = await fetchFileFromGitHub(filePath);
+      console.log('Updated File Content:', updatedFileData);
+    } catch (updateError) {
+      console.error('Error updating file on GitHub:', updateError.message);
+      return res.status(500).json({ error: 'Failed to write updated data to GitHub.' });
+    }
 
     res.json({ message: 'Product updated successfully!', updatedProduct });
   } catch (error) {
@@ -222,6 +234,7 @@ app.put('/api/products/:index', async (req, res) => {
     res.status(500).json({ error: 'Failed to update the product' });
   }
 });
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
