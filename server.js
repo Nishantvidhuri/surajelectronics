@@ -1,12 +1,12 @@
 import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import xlsx from 'xlsx';
 import cors from 'cors';
 import multer from 'multer';
-import fs from 'fs';
 import axios from 'axios';
 import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+
 dotenv.config();
 
 const app = express();
@@ -21,19 +21,15 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 // GitHub API base URL
 const GITHUB_API_BASE_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents`;
 
-// Get the directory name
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Enable CORS
-app.use(cors());
-app.use(express.json());
-
-// Static folder for serving uploaded images
+// Directory to save uploaded photos
 const uploadPath = path.join(__dirname, 'public', 'photos');
 if (!fs.existsSync(uploadPath)) {
   fs.mkdirSync(uploadPath, { recursive: true });
 }
+
+// Middleware
+app.use(cors());
+app.use(express.json());
 app.use('/photos', express.static(uploadPath));
 
 // Multer configuration for file uploads
@@ -42,8 +38,7 @@ const storage = multer.diskStorage({
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-    // Use temporary filename; it will be renamed later
-    cb(null, file.originalname);
+    cb(null, file.originalname); // Default name, updated later
   },
 });
 const upload = multer({ storage });
@@ -81,6 +76,24 @@ const updateFileOnGitHub = async (filePath, content, sha) => {
   }
 };
 
+// Endpoint to get all products
+app.get('/api/products', async (req, res) => {
+  try {
+    const filePath = 'public/product.xlsx';
+    const fileData = await fetchFileFromGitHub(filePath);
+
+    const workbook = xlsx.read(Buffer.from(fileData.content, 'base64'));
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const allData = xlsx.utils.sheet_to_json(worksheet);
+
+    res.json({ allData });
+  } catch (error) {
+    console.error('Error in /api/products:', error.message);
+    res.status(500).json({ error: 'Failed to fetch product data' });
+  }
+});
+
 // Endpoint to get remote data
 app.get('/api/remote-data', async (req, res) => {
   try {
@@ -94,13 +107,13 @@ app.get('/api/remote-data', async (req, res) => {
 
     res.json(remoteData);
   } catch (error) {
-    console.error('Error fetching remote data:', error.message);
+    console.error('Error in /api/remote-data:', error.message);
     res.status(500).json({ error: 'Failed to fetch remote data' });
   }
 });
 
 // Endpoint to add a new remote
-app.post('/api/add-remote', upload.single('photo'), async (req, res) => {
+app.post('/api/add-remote', upload.single('image'), async (req, res) => {
   try {
     const { name, shelfNumber } = req.body;
 
@@ -108,7 +121,6 @@ app.post('/api/add-remote', upload.single('photo'), async (req, res) => {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    // Rename the uploaded file to the desired format
     const fileExtension = path.extname(req.file.originalname);
     const newFilename = `${name}_${shelfNumber}${fileExtension}`;
     const newFilePath = path.join(uploadPath, newFilename);
@@ -126,7 +138,7 @@ app.post('/api/add-remote', upload.single('photo'), async (req, res) => {
     const newData = {
       name,
       shelfNumber,
-      imagePath: `/photos/${newFilename}`,
+      image: `/photos/${newFilename}`, // Save file path in 'image' column
     };
 
     allData.push(newData);
@@ -137,10 +149,43 @@ app.post('/api/add-remote', upload.single('photo'), async (req, res) => {
 
     await updateFileOnGitHub(filePath, updatedContent, fileData.sha);
 
-    res.status(200).json({ message: 'Remote added successfully', data: allData });
+    res.status(200).json({ message: 'Remote added successfully', data: newData });
   } catch (error) {
     console.error('Error adding remote:', error.message);
     res.status(500).json({ error: 'Failed to add remote' });
+  }
+});
+
+// Endpoint to update a specific product
+app.put('/api/products/:index', async (req, res) => {
+  const { index } = req.params;
+  const updatedProduct = req.body;
+
+  try {
+    const filePath = 'public/product.xlsx';
+    const fileData = await fetchFileFromGitHub(filePath);
+
+    const workbook = xlsx.read(Buffer.from(fileData.content, 'base64'));
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const allData = xlsx.utils.sheet_to_json(worksheet);
+
+    if (index < 0 || index >= allData.length) {
+      return res.status(404).json({ error: 'Product not found at the specified index' });
+    }
+
+    allData[index] = { ...allData[index], ...updatedProduct };
+
+    const updatedWorksheet = xlsx.utils.json_to_sheet(allData);
+    workbook.Sheets[sheetName] = updatedWorksheet;
+    const updatedContent = xlsx.write(workbook, { type: 'buffer' });
+
+    await updateFileOnGitHub(filePath, updatedContent, fileData.sha);
+
+    res.json({ message: 'Product updated successfully!', updatedProduct });
+  } catch (error) {
+    console.error('Error updating product:', error.message);
+    res.status(500).json({ error: 'Failed to update the product' });
   }
 });
 

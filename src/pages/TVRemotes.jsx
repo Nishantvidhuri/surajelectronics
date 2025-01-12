@@ -5,7 +5,7 @@ const TVRemotes = ({ searchQuery }) => {
   const [remoteData, setRemoteData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false); // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [newRemote, setNewRemote] = useState({
     photo: null,
     name: "",
@@ -40,13 +40,11 @@ const TVRemotes = ({ searchQuery }) => {
     }
 
     try {
-      // Create FormData to handle file upload
       const formData = new FormData();
       formData.append("photo", newRemote.photo);
       formData.append("name", newRemote.name);
       formData.append("shelfNumber", newRemote.shelfNumber);
 
-      // Send POST request to the backend
       const response = await fetch(
         "https://suraj-electronics.onrender.com/api/add-remote",
         {
@@ -59,7 +57,6 @@ const TVRemotes = ({ searchQuery }) => {
         throw new Error("Failed to add new remote");
       }
 
-      // Fetch updated data after successful addition
       const updatedData = await response.json();
       setRemoteData(updatedData);
       setIsModalOpen(false);
@@ -105,60 +102,61 @@ const TVRemotes = ({ searchQuery }) => {
 
       {/* Modal */}
       {isModalOpen && (
-  <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-    <div className="bg-gray-800 text-gray-100 p-6 rounded-lg shadow-md w-11/12 max-w-md">
-      <h3 className="text-xl font-bold mb-4 text-gray-200">Add New Remote</h3>
-      <div className="mb-4">
-        <label className="block text-gray-400 mb-2">Photo:</label>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) =>
-            setNewRemote({ ...newRemote, photo: e.target.files[0] })
-          }
-          className="w-full border border-gray-600 bg-gray-700 text-gray-200 rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-500"
-        />
-      </div>
-      <div className="mb-4">
-        <label className="block text-gray-400 mb-2">Name:</label>
-        <input
-          type="text"
-          value={newRemote.name}
-          onChange={(e) =>
-            setNewRemote({ ...newRemote, name: e.target.value })
-          }
-          className="w-full border border-gray-600 bg-gray-700 text-gray-200 rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-500"
-        />
-      </div>
-      <div className="mb-4">
-        <label className="block text-gray-400 mb-2">Shelf Number:</label>
-        <input
-          type="text"
-          value={newRemote.shelfNumber}
-          onChange={(e) =>
-            setNewRemote({ ...newRemote, shelfNumber: e.target.value })
-          }
-          className="w-full border border-gray-600 bg-gray-700 text-gray-200 rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-500"
-        />
-      </div>
-      <div className="flex justify-end space-x-4">
-        <button
-          onClick={() => setIsModalOpen(false)}
-          className="bg-gray-600 text-gray-200 px-4 py-2 rounded hover:bg-gray-700"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleAddRemote}
-          className="bg-yellow-500 text-gray-900 px-4 py-2 rounded hover:bg-yellow-600"
-        >
-          Add
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-gray-800 text-gray-100 p-6 rounded-lg shadow-md w-11/12 max-w-md">
+            <h3 className="text-xl font-bold mb-4 text-gray-200">
+              Add New Remote
+            </h3>
+            <div className="mb-4">
+              <label className="block text-gray-400 mb-2">Photo:</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) =>
+                  setNewRemote({ ...newRemote, photo: e.target.files[0] })
+                }
+                className="w-full border border-gray-600 bg-gray-700 text-gray-200 rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-500"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-gray-400 mb-2">Name:</label>
+              <input
+                type="text"
+                value={newRemote.name}
+                onChange={(e) =>
+                  setNewRemote({ ...newRemote, name: e.target.value })
+                }
+                className="w-full border border-gray-600 bg-gray-700 text-gray-200 rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-500"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-gray-400 mb-2">Shelf Number:</label>
+              <input
+                type="text"
+                value={newRemote.shelfNumber}
+                onChange={(e) =>
+                  setNewRemote({ ...newRemote, shelfNumber: e.target.value })
+                }
+                className="w-full border border-gray-600 bg-gray-700 text-gray-200 rounded px-3 py-2 focus:outline-none focus:ring focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="bg-gray-600 text-gray-200 px-4 py-2 rounded hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddRemote}
+                className="bg-yellow-500 text-gray-900 px-4 py-2 rounded hover:bg-yellow-600"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
