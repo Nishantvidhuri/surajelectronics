@@ -122,44 +122,73 @@ app.post('/api/add-remote', upload.single('image'), async (req, res) => {
   try {
     const { name, shelfNumber } = req.body;
 
+    // Validate required fields
     if (!name || !shelfNumber || !req.file) {
-      return res.status(400).json({ error: 'All fields are required' });
+      return res.status(400).json({ error: 'All fields (name, shelfNumber, image) are required.' });
     }
 
+    // Rename the uploaded file to name_shelfNumber format
     const fileExtension = path.extname(req.file.originalname);
     const newFilename = `${name}_${shelfNumber}${fileExtension}`;
     const newFilePath = path.join(uploadPath, newFilename);
 
-    fs.renameSync(req.file.path, newFilePath);
+    try {
+      fs.renameSync(req.file.path, newFilePath);
+    } catch (fileError) {
+      console.error('Error renaming file:', fileError.message);
+      return res.status(500).json({ error: 'Failed to save uploaded file.' });
+    }
 
+    // Fetch the remote_data.xlsx file from GitHub
     const filePath = 'public/remote_data.xlsx';
-    const fileData = await fetchFileFromGitHub(filePath);
+    let fileData;
+    try {
+      fileData = await fetchFileFromGitHub(filePath);
+    } catch (fetchError) {
+      console.error('Error fetching remote_data.xlsx:', fetchError.message);
+      return res.status(500).json({ error: 'Failed to fetch remote_data.xlsx from GitHub.' });
+    }
 
-    const workbook = xlsx.read(Buffer.from(fileData.content, 'base64'));
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const allData = xlsx.utils.sheet_to_json(worksheet);
+    // Parse the Excel file
+    let workbook, sheetName, worksheet, allData;
+    try {
+      workbook = xlsx.read(Buffer.from(fileData.content, 'base64'));
+      sheetName = workbook.SheetNames[0];
+      worksheet = workbook.Sheets[sheetName];
+      allData = xlsx.utils.sheet_to_json(worksheet, { defval: "" });
+    } catch (parseError) {
+      console.error('Error parsing remote_data.xlsx:', parseError.message);
+      return res.status(500).json({ error: 'Failed to parse remote_data.xlsx.' });
+    }
 
+    // Add the new remote to the data
     const newData = {
       name,
       shelfNumber,
-      image: `/photos/${newFilename}`, // Save file path in 'image' column
+      image: `/photos/${newFilename}`, // Save file path in the 'image' column
     };
-
     allData.push(newData);
 
-    const updatedWorksheet = xlsx.utils.json_to_sheet(allData);
-    workbook.Sheets[sheetName] = updatedWorksheet;
-    const updatedContent = xlsx.write(workbook, { type: 'buffer' });
+    // Update the Excel file
+    try {
+      const updatedWorksheet = xlsx.utils.json_to_sheet(allData);
+      workbook.Sheets[sheetName] = updatedWorksheet;
+      const updatedContent = xlsx.write(workbook, { type: 'buffer' });
 
-    await updateFileOnGitHub(filePath, updatedContent, fileData.sha);
+      await updateFileOnGitHub(filePath, updatedContent, fileData.sha);
+    } catch (updateError) {
+      console.error('Error updating remote_data.xlsx:', updateError.message);
+      return res.status(500).json({ error: 'Failed to update remote_data.xlsx.' });
+    }
 
-    res.status(200).json({ message: 'Remote added successfully', data: newData });
+    // Respond with success
+    res.status(200).json({ message: 'Remote added successfully.', data: newData });
   } catch (error) {
-    console.error('Error adding remote:', error.message);
-    res.status(500).json({ error: 'Failed to add remote' });
+    console.error('Unexpected error in /api/add-remote:', error.message);
+    res.status(500).json({ error: 'An unexpected error occurred.' });
   }
 });
+
 
 // Endpoint to update a specific product
 app.put('/api/products/:index', async (req, res) => {
